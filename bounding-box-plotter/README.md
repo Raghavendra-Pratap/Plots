@@ -260,7 +260,7 @@ We welcome contributions! Please see our [Contributing Guide](CONTRIBUTING.md) f
 ### Development Setup
 
 ```bash
-git clone https://github.com/raghavendrapratap/bounding-box-plotter.git
+git clone https://github.com/Raghavendra-Pratap/Plots.git
 cd bounding-box-plotter
 pip install -r requirements.txt[dev]
 pre-commit install

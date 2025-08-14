@@ -8,7 +8,7 @@ app_description: Professional tool for visualizing and annotating bounding box d
 # Update server configuration
 update_urls:
   - https://raghavendrapratap.com/updates
-  - https://github.com/raghavendrapratap/bounding-box-plotter/releases/latest
+  - https://github.com/Raghavendra-Pratap/Plots/releases/latest
 
 # Update channels
 channels:

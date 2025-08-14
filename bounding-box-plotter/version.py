@@ -7,7 +7,7 @@ __build__ = "20250118"
 __author__ = "Raghavendra Pratap"
 __email__ = "contact@raghavendrapratap.com"
 __website__ = "https://raghavendrapratap.com/"
-__github__ = "https://github.com/raghavendrapratap/bounding-box-plotter"
+__github__ = "https://github.com/Raghavendra-Pratap/Plots"
 
 # Update server configuration
 UPDATE_SERVER = "https://raghavendrapratap.com/updates"

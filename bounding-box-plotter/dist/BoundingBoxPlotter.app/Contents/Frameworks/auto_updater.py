@@ -1,1 +1,0 @@
-../Resources/auto_updater.py

@@ -1,6 +1,0 @@
-[console_scripts]
-bbp = bounding_box_plotter:main
-bounding-box-plotter = bounding_box_plotter:main
-
-[gui_scripts]
-bounding-box-plotter-gui = bounding_box_plotter:main

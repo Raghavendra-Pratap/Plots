@@ -1,18 +1,17 @@
-# Core dependencies
-pandas>=1.3.0
-matplotlib>=3.5.0
-numpy>=1.21.0
-Pillow>=8.3.0
-requests>=2.25.0
-psutil>=5.8.0
+# Core dependencies - using stable, compatible versions
+pandas>=1.5.0,<2.1.0
+matplotlib>=3.6.0,<3.8.0
+numpy>=1.24.0,<2.0.0
+Pillow>=10.0.0,<11.0.0
+requests>=2.28.0,<3.0.0
+psutil>=5.9.0,<6.0.0
 
 # Auto-update functionality
 PyUpdater>=4.0.0
 
 # Optional professional icon libraries
-fontawesome>=0.0.1
-material-icons>=0.0.1
-feather-icons>=0.0.1
+# Note: These are optional and may not be available on all platforms
+# fontawesome>=0.0.1  # Uncomment if you want to use FontAwesome icons
 
 # Development and testing dependencies
 pytest>=6.0.0
@@ -38,4 +37,4 @@ pywin32>=300; sys_platform == "win32"
 pyobjc-framework-Cocoa>=8.0; sys_platform == "darwin"
 
 # Linux
-python-xlib>=0.29; sys_platform == "linux" 
+python-xlib>=0.29; sys_platform == "linux"

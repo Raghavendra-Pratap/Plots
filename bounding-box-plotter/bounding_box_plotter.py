@@ -1,97 +1,12 @@
 import sys
-import subprocess
-import importlib
 import os
 
 # Set matplotlib backend before importing matplotlib to prevent segmentation faults
 os.environ['MPLBACKEND'] = 'TkAgg'
 
-def install_package(package):
-    """Install a package using pip"""
-    try:
-        subprocess.check_call([sys.executable, "-m", "pip", "install", package])
-        print(f"Successfully installed {package}")
-    except subprocess.CalledProcessError:
-        print(f"Failed to install {package}")
-        return False
-    return True
-
-def check_and_install_dependencies():
-    """Check and install required dependencies"""
-    required_packages = {
-        'pandas': 'pandas',
-        'matplotlib': 'matplotlib',
-        'numpy': 'numpy',
-        'PIL': 'Pillow',
-        'requests': 'requests',
-        'psutil': 'psutil'
-    }
-    
-    # Professional icon libraries (optional but recommended)
-    professional_icon_packages = {
-        'fontawesome': 'fontawesome',
-        'material-icons': 'material-icons',
-        'feather-icons': 'feather-icons'
-    }
-    
-    missing_packages = []
-    
-    for module_name, package_name in required_packages.items():
-        try:
-            importlib.import_module(module_name)
-            print(f"✓ {module_name} is already installed")
-        except ImportError:
-            print(f"✗ {module_name} is not installed. Installing...")
-            missing_packages.append((module_name, package_name))
-    
-    # Install missing packages
-    for module_name, package_name in missing_packages:
-        if install_package(package_name):
-            print(f"✓ {package_name} installed successfully")
-        else:
-            print(f"✗ Failed to install {package_name}. Please install manually: pip install {package_name}")
-            return False
-    
-    # Re-import matplotlib if it was installed
-    if 'matplotlib' in [pkg[1] for pkg in missing_packages if pkg[1] == 'matplotlib']:
-        try:
-            import matplotlib
-            matplotlib.use('TkAgg')
-            import matplotlib.pyplot as plt
-            import matplotlib.patches as patches
-            from matplotlib.widgets import Button, RadioButtons, Slider
-            from matplotlib import gridspec
-            from matplotlib.transforms import Bbox
-            from matplotlib import image as mpimg
-            print("✓ matplotlib re-imported successfully after installation")
-        except Exception as e:
-            print(f"✗ Failed to re-import matplotlib after installation: {e}")
-            return False
-    
-    # Check tkinter (built-in on most systems)
-    try:
-        import tkinter
-        print("✓ tkinter is available")
-    except ImportError:
-        print("✗ tkinter is not available. This may cause issues with file dialogs.")
-        print("On some systems, you may need to install python3-tk package.")
-    
-    # Offer to install professional icon libraries
-    print("\n🎨 Professional Icon Libraries (Optional but Recommended):")
-    print("For corporate/professional use, consider installing:")
-    print("  • fontawesome: pip install fontawesome")
-    print("  • material-icons: pip install material-icons")
-    print("  • feather-icons: pip install feather-icons")
-    
-    return True
-
-# Check and install dependencies before importing
-print("Checking dependencies...")
-if not check_and_install_dependencies():
-    print("Some dependencies could not be installed. Please install them manually and try again.")
-    sys.exit(1)
-
-print("All dependencies are ready!")
+# Dependencies are now managed by PyInstaller and requirements.txt
+# Remove runtime dependency installation for bundled applications
+print("✓ Dependencies managed by PyInstaller - no runtime installation needed")
 
 # Import matplotlib with error handling
 try:

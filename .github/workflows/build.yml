@@ -14,7 +14,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: ['3.10']  # Test only one Python version first
+        python-version: ['3.10']  # Use Python 3.10 (GitHub provides this)
     
     steps:
     - uses: actions/checkout@v3
@@ -45,7 +45,7 @@ jobs:
     - name: Set up Python
       uses: actions/setup-python@v4
       with:
-        python-version: '3.10'
+        python-version: '3.10'  # Use Python 3.10
     
     - name: Install dependencies
       run: |

@@ -1,0 +1,152 @@
+# PyUpdater Configuration for Bounding Box Plotter
+
+# Application information
+app_name: BoundingBoxPlotter
+app_version: 2.0.0
+app_description: Professional tool for visualizing and annotating bounding box data from CSV files
+
+# Update server configuration
+update_urls:
+  - https://raghavendrapratap.com/updates
+  - https://github.com/Raghavendra-Pratap/Plots/releases/latest
+
+# Update channels
+channels:
+  - stable
+  - beta
+  - alpha
+
+# Default channel
+default_channel: stable
+
+# Update check interval (in seconds)
+update_check_interval: 86400  # 24 hours
+
+# Auto-update settings
+auto_update:
+  enabled: true
+  check_on_startup: true
+  download_automatically: false
+  install_automatically: false
+
+# File patterns to include in updates
+include_files:
+  - "*.exe"
+  - "*.dll"
+  - "*.so"
+  - "*.dylib"
+  - "*.py"
+  - "*.pyc"
+  - "*.pyo"
+  - "*.pyd"
+  - "*.json"
+  - "*.yml"
+  - "*.yaml"
+  - "*.txt"
+  - "*.md"
+  - "*.ico"
+  - "*.icns"
+  - "*.png"
+  - "*.jpg"
+  - "*.jpeg"
+  - "*.gif"
+  - "*.svg"
+
+# File patterns to exclude from updates
+exclude_files:
+  - "*.log"
+  - "*.tmp"
+  - "*.temp"
+  - "*.cache"
+  - "__pycache__"
+  - "*.pyc"
+  - ".git"
+  - ".gitignore"
+  - "tests"
+  - "test_*"
+  - "*_test.py"
+  - "*.spec"
+  - "build"
+  - "dist"
+  - "*.egg-info"
+
+# Platform-specific settings
+platforms:
+  windows:
+    executable: BoundingBoxPlotter.exe
+    icon: assets/icon.ico
+    installer: BoundingBoxPlotter-Setup.exe
+    
+  macos:
+    executable: BoundingBoxPlotter
+    icon: assets/icon.icns
+    app_bundle: BoundingBoxPlotter.app
+    
+  linux:
+    executable: BoundingBoxPlotter
+    icon: assets/icon.png
+    desktop_file: bounding-box-plotter.desktop
+
+# Build configuration
+build:
+  output_dir: dist
+  temp_dir: build
+  clean_build: true
+  optimize: true
+  strip: false
+  upx: true
+  
+# Signing configuration (for code signing)
+signing:
+  enabled: false
+  certificate_file: ""
+  certificate_password: ""
+  timestamp_server: "http://timestamp.digicert.com"
+  
+# Compression settings
+compression:
+  algorithm: gzip
+  level: 9
+  
+# Security settings
+security:
+  hash_algorithm: sha256
+  verify_updates: true
+  require_signature: false
+  
+# Logging configuration
+logging:
+  level: INFO
+  file: pyupdater.log
+  max_size: 10485760  # 10MB
+  backup_count: 5
+  
+# Notification settings
+notifications:
+  show_progress: true
+  show_download_progress: true
+  show_install_progress: true
+  show_error_dialogs: true
+  
+# Backup settings
+backup:
+  enabled: true
+  backup_dir: backups
+  max_backups: 3
+  
+# Rollback settings
+rollback:
+  enabled: true
+  max_versions: 2
+  
+# Network settings
+network:
+  timeout: 30
+  retry_count: 3
+  retry_delay: 5
+  
+# Development settings
+development:
+  debug_mode: false
+  verbose_logging: false
+  test_mode: false 

@@ -1,0 +1,176 @@
+name: Build and Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+  pull_request:
+    branches: [ main, develop ]
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+        python-version: ['3.8', '3.9', '3.10', '3.11', '3.12']
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ matrix.python-version }}
+    
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+        pip install -r requirements.txt[dev]
+    
+    - name: Run tests
+      run: |
+        pytest bounding-box-plotter/tests/ -v --cov=bounding_box_plotter --cov-report=xml
+    
+    - name: Upload coverage to Codecov
+      uses: codecov/codecov-action@v3
+      with:
+        file: ./coverage.xml
+        flags: unittests
+        name: codecov-umbrella
+        fail_ci_if_error: false
+
+  build:
+    needs: test
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+        python-version: ['3.11']
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ matrix.python-version }}
+    
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+        pip install -r requirements.txt[build]
+        pip install pyinstaller
+    
+    - name: Build executable
+      run: |
+        cd bounding-box-plotter
+        pyinstaller bounding_box_plotter.spec --clean
+        
+    - name: Create release archive
+      run: |
+        if [ "${{ runner.os }}" = "Windows" ]; then
+          cd bounding-box-plotter/dist/BoundingBoxPlotter
+          7z a -tzip ../../../BoundingBoxPlotter-Windows-${{ github.ref_name }}.zip .
+        elif [ "${{ runner.os }}" = "macOS" ]; then
+          cd bounding-box-plotter/dist
+          zip -r ../../BoundingBoxPlotter-macOS-${{ github.ref_name }}.zip BoundingBoxPlotter.app/
+        else
+          cd bounding-box-plotter/dist
+          tar -czf ../../BoundingBoxPlotter-Linux-${{ github.ref_name }}.tar.gz BoundingBoxPlotter/
+        fi
+    
+    - name: Upload build artifacts
+      uses: actions/upload-artifact@v3
+      with:
+        name: BoundingBoxPlotter-${{ runner.os }}-${{ github.ref_name }}
+        path: |
+          BoundingBoxPlotter-*.zip
+          BoundingBoxPlotter-*.tar.gz
+          bounding-box-plotter/dist/
+
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/')
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Download all build artifacts
+      uses: actions/download-artifact@v3
+      with:
+        path: dist/
+    
+    - name: Create Release
+      id: create_release
+      uses: actions/create-release@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        tag_name: ${{ github.ref }}
+        release_name: Release ${{ github.ref }}
+        draft: false
+        prerelease: false
+    
+    - name: Upload Release Assets
+      uses: actions/upload-release-asset@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        upload_url: ${{ steps.create_release.outputs.upload_url }}
+        asset_path: ./dist/BoundingBoxPlotter-*.zip
+        asset_name: BoundingBoxPlotter-Windows-${{ github.ref_name }}.zip
+        asset_content_type: application/zip
+    
+    - name: Upload Release Assets
+      uses: actions/upload-release-asset@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        upload_url: ${{ steps.create_release.outputs.upload_url }}
+        asset_path: ./dist/BoundingBoxPlotter-*.tar.gz
+        asset_name: BoundingBoxPlotter-Linux-${{ github.ref_name }}.tar.gz
+        asset_content_type: application/gzip
+    
+    - name: Upload Release Assets
+      uses: actions/upload-release-asset@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        upload_url: ${{ steps.create_release.outputs.upload_url }}
+        asset_path: ./dist/BoundingBoxPlotter-macOS-*.zip
+        asset_name: BoundingBoxPlotter-macOS-${{ github.ref_name }}.zip
+        asset_content_type: application/zip
+
+  publish-pypi:
+    needs: test
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/')
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
+    
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt[build]
+    
+    - name: Build package
+      run: |
+        cd bounding-box-plotter
+        python setup.py sdist bdist_wheel
+    
+    - name: Publish to PyPI
+      uses: pypa/gh-action-pypi-publish@release/v1
+      with:
+        password: ${{ secrets.PYPI_API_TOKEN }}
+        skip_existing: true 

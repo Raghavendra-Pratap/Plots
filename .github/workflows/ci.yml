@@ -196,11 +196,11 @@ jobs:
     - name: Test project structure
       run: |
         echo "🔍 Testing project structure..."
-        echo "Current directory: %cd%"
-        if exist frontend (echo Frontend exists: YES) else (echo Frontend exists: NO)
-        if exist backend (echo Backend exists: YES) else (echo Backend exists: NO)
-        if exist requirements.txt (echo Requirements.txt exists: YES) else (echo Requirements.txt exists: NO)
-        if exist build_complete_package.py (echo Build script exists: YES) else (echo Build script exists: NO)
+        echo "Current directory: $PWD"
+        if (Test-Path "frontend") { echo "Frontend exists: YES" } else { echo "Frontend exists: NO" }
+        if (Test-Path "backend") { echo "Backend exists: YES" } else { echo "Backend exists: NO" }
+        if (Test-Path "requirements.txt") { echo "Requirements.txt exists: YES" } else { echo "Requirements.txt exists: NO" }
+        if (Test-Path "build_complete_package.py") { echo "Build script exists: YES" } else { echo "Build script exists: NO" }
 
   # Cross-platform validation
   validate-cross-platform:

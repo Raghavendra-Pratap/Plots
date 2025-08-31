@@ -1,0 +1,290 @@
+name: Beta Packaging - Cross-OS Builds
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Beta version (e.g., 2.0.1-beta.1)'
+        required: true
+        default: '2.0.1-beta.1'
+      platforms:
+        description: 'Target platforms'
+        required: true
+        default: 'all'
+        type: choice
+        options:
+          - all
+          - macos
+          - linux
+          - windows
+
+jobs:
+  package-macos:
+    runs-on: macos-latest
+    name: macOS Package
+    if: ${{ github.event.inputs.platforms == 'all' || github.event.inputs.platforms == 'macos' }}
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+        cache: 'npm'
+        cache-dependency-path: frontend/package-lock.json
+
+    - name: Setup Rust
+      uses: actions-rs/toolchain@v1
+      with:
+        toolchain: stable
+        override: true
+
+    - name: Install frontend dependencies
+      working-directory: frontend
+      run: npm ci
+
+    - name: Build frontend
+      working-directory: frontend
+      run: npm run build
+
+    - name: Build Rust backend
+      working-directory: backend
+      run: cargo build --release
+
+    - name: Setup Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.9'
+
+    - name: Install Python dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+
+    - name: Build complete package
+      run: python build_complete_package.py
+
+    - name: Build macOS DMG
+      working-directory: frontend
+      run: |
+        npx electron-builder --mac --publish=never
+        echo "✅ macOS .dmg package created"
+
+    - name: Upload macOS package
+      uses: actions/upload-artifact@v4
+      with:
+        name: macos-package
+        path: frontend/dist/*.dmg
+        retention-days: 30
+
+  package-linux:
+    runs-on: ubuntu-latest
+    name: Linux Package
+    if: ${{ github.event.inputs.platforms == 'all' || github.event.inputs.platforms == 'linux' }}
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+        cache: 'npm'
+        cache-dependency-path: frontend/package-lock.json
+
+    - name: Setup Rust
+      uses: actions-rs/toolchain@v1
+      with:
+        toolchain: stable
+        override: true
+
+    - name: Install frontend dependencies
+      working-directory: frontend
+      run: npm ci
+
+    - name: Build frontend
+      working-directory: frontend
+      run: npm run build
+
+    - name: Build Rust backend
+      working-directory: backend
+      run: cargo build --release
+
+    - name: Setup Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.9'
+
+    - name: Install Python dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+
+    - name: Build complete package
+      run: python build_complete_package.py
+
+    - name: Build Linux AppImage
+      working-directory: frontend
+      run: |
+        npx electron-builder --linux --publish=never
+        echo "✅ Linux .AppImage package created"
+
+    - name: Upload Linux package
+      uses: actions/upload-artifact@v4
+      with:
+        name: linux-package
+        path: frontend/dist/*.AppImage
+        retention-days: 30
+
+  package-windows:
+    runs-on: windows-latest
+    name: Windows Package
+    if: ${{ github.event.inputs.platforms == 'all' || github.event.inputs.platforms == 'windows' }}
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+        cache: 'npm'
+        cache-dependency-path: frontend/package-lock.json
+
+    - name: Setup Rust
+      uses: actions-rs/toolchain@v1
+      with:
+        toolchain: stable
+        override: true
+
+    - name: Install frontend dependencies
+      working-directory: frontend
+      run: npm ci
+
+    - name: Build frontend
+      working-directory: frontend
+      run: npm run build
+
+    - name: Build Rust backend
+      working-directory: backend
+      run: cargo build --release
+
+    - name: Setup Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.9'
+
+    - name: Install Python dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+
+    - name: Build complete package
+      run: python build_complete_package.py
+
+    - name: Build Windows EXE
+      working-directory: frontend
+      run: |
+        npx electron-builder --win --publish=never
+        echo "✅ Windows .exe package created"
+
+    - name: Upload Windows package
+      uses: actions/upload-artifact@v4
+      with:
+        name: windows-package
+        path: frontend/dist/*.exe
+        retention-days: 30
+
+  create-beta-release:
+    runs-on: ubuntu-latest
+    name: Create Beta Release
+    needs: [package-macos, package-linux, package-windows]
+    if: always() && (needs.package-macos.result == 'success' || needs.package-linux.result == 'success' || needs.package-windows.result == 'success')
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Download all packages
+      uses: actions/download-artifact@v4
+      with:
+        path: packages/
+
+    - name: Create beta release
+      id: create_release
+      uses: actions/create-release@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        tag_name: ${{ github.event.inputs.version }}
+        release_name: Data Studio v2 Beta ${{ github.event.inputs.version }}
+        body: |
+          ## 🧪 Data Studio v2 Beta Release ${{ github.event.inputs.version }}
+          
+          ### ⚠️ Beta Release Notice
+          This is a **beta version** for testing purposes. It may contain bugs or incomplete features.
+          
+          ### 📦 Available Packages
+          - **macOS**: `.dmg` installer
+          - **Linux**: `.AppImage` package  
+          - **Windows**: `.exe` installer
+          
+          ### 🔍 What to Test
+          - Data import and processing
+          - Workflow builder functionality
+          - Formula execution
+          - Cross-platform compatibility
+          
+          ### 🐛 Report Issues
+          Please report any bugs or issues you encounter during testing.
+          
+          ### 📋 Installation
+          1. Download the appropriate package for your platform
+          2. Run the installer/package
+          3. Launch Data Studio v2 Beta
+          
+          ### 📄 License
+          MIT License - see LICENSE file for details.
+
+    - name: Upload individual packages
+      uses: actions/upload-release-asset@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        upload_url: ${{ steps.create_release.outputs.upload_url }}
+        asset_path: packages/macos-package/*.dmg
+        asset_name: Data Studio v2 Beta ${{ github.event.inputs.version }}.dmg
+        asset_content_type: application/octet-stream
+      if: needs.package-macos.result == 'success'
+
+    - name: Upload Linux package
+      uses: actions/upload-release-asset@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        upload_url: ${{ steps.create_release.outputs.upload_url }}
+        asset_path: packages/linux-package/*.AppImage
+        asset_name: Data Studio v2 Beta ${{ github.event.inputs.version }}.AppImage
+        asset_content_type: application/octet-stream
+      if: needs.package-linux.result == 'success'
+
+    - name: Upload Windows package
+      uses: actions/upload-release-asset@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        upload_url: ${{ steps.create_release.outputs.upload_url }}
+        asset_path: packages/windows-package/*.exe
+        asset_name: Data Studio v2 Beta ${{ github.event.inputs.version }}.exe
+        asset_content_type: application/octet-stream
+      if: needs.package-windows.result == 'success'
+
+    - name: Success notification
+      run: |
+        echo "🎉 Beta release ${{ github.event.inputs.version }} completed!"
+        echo "📦 Individual OS packages uploaded to GitHub release"
+        echo "🔗 Release URL: ${{ steps.create_release.outputs.html_url }}"

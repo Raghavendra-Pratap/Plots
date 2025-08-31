@@ -1,0 +1,249 @@
+name: Pre-Release Validation
+
+on:
+  push:
+    branches: [ develop ]
+  pull_request:
+    branches: [ develop ]
+
+jobs:
+  # Validate project structure and consistency
+  validate-structure:
+    runs-on: ubuntu-latest
+    name: Project Structure Validation
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Validate project structure
+      run: |
+        echo "🔍 Validating project structure consistency..."
+        echo "================================================"
+        
+        # Check essential directories exist
+        echo "📁 Checking essential directories..."
+        required_dirs=("frontend" "backend" ".github/workflows")
+        for dir in "${required_dirs[@]}"; do
+          if [ -d "$dir" ]; then
+            echo "✅ $dir exists"
+          else
+            echo "❌ $dir missing - FAILING"
+            exit 1
+          fi
+        done
+        
+        # Check essential files exist
+        echo ""
+        echo "📄 Checking essential files..."
+        required_files=("requirements.txt" "build_complete_package.py" "frontend/package.json" "backend/Cargo.toml")
+        for file in "${required_files[@]}"; do
+          if [ -f "$file" ]; then
+            echo "✅ $file exists"
+          else
+            echo "❌ $file missing - FAILING"
+            exit 1
+          fi
+        done
+        
+        # Check workflow files
+        echo ""
+        echo "⚙️ Checking workflow files..."
+        workflow_files=("ci.yml" "release.yml" "pre-release-validation.yml")
+        for file in "${workflow_files[@]}"; do
+          if [ -f ".github/workflows/$file" ]; then
+            echo "✅ $file exists"
+          else
+            echo "❌ $file missing - FAILING"
+            exit 1
+          fi
+        done
+        
+        echo ""
+        echo "✅ Project structure validation passed!"
+
+  # Validate dependencies consistency
+  validate-dependencies:
+    runs-on: ubuntu-latest
+    name: Dependencies Validation
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+        cache: 'npm'
+        cache-dependency-path: frontend/package-lock.json
+
+    - name: Setup Rust
+      uses: actions-rs/toolchain@v1
+      with:
+        toolchain: stable
+        override: true
+
+    - name: Setup Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.9'
+
+    - name: Validate frontend dependencies
+      working-directory: frontend
+      run: |
+        echo "📦 Validating frontend dependencies..."
+        npm ci --audit
+        echo "✅ Frontend dependencies validated"
+
+    - name: Validate backend dependencies
+      working-directory: backend
+      run: |
+        echo "📦 Validating backend dependencies..."
+        cargo check
+        echo "✅ Backend dependencies validated"
+
+    - name: Validate Python dependencies
+      run: |
+        echo "📦 Validating Python dependencies..."
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+        echo "✅ Python dependencies validated"
+
+  # Validate build consistency
+  validate-builds:
+    runs-on: ubuntu-latest
+    name: Build Consistency Validation
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+        cache: 'npm'
+        cache-dependency-path: frontend/package-lock.json
+
+    - name: Setup Rust
+      uses: actions-rs/toolchain@v1
+      with:
+        toolchain: stable
+        override: true
+
+    - name: Setup Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.9'
+
+    - name: Install dependencies
+      run: |
+        echo "📦 Installing all dependencies..."
+        cd frontend && npm ci
+        cd ../backend && cargo check
+        cd .. && pip install -r requirements.txt
+
+    - name: Validate frontend build
+      working-directory: frontend
+      run: |
+        echo "🏗️ Validating frontend build..."
+        npm run build
+        echo "✅ Frontend builds successfully"
+
+    - name: Validate backend build
+      working-directory: backend
+      run: |
+        echo "🏗️ Validating backend build..."
+        cargo build --release
+        echo "✅ Backend builds successfully"
+
+    - name: Validate build script
+      run: |
+        echo "🏗️ Validating build script..."
+        python build_complete_package.py --validate-only
+        echo "✅ Build script validation passed"
+
+  # Validate workflow consistency
+  validate-workflows:
+    runs-on: ubuntu-latest
+    name: Workflow Consistency Validation
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Validate workflow syntax
+      run: |
+        echo "🔍 Validating workflow syntax..."
+        
+        # Check if workflows are valid YAML
+        for workflow in .github/workflows/*.yml; do
+          echo "Validating $workflow..."
+          python -c "import yaml; yaml.safe_load(open('$workflow'))"
+          echo "✅ $workflow syntax valid"
+        done
+        
+        echo "✅ All workflows syntax validated"
+
+    - name: Validate workflow triggers
+      run: |
+        echo "🔍 Validating workflow triggers..."
+        
+        # Check CI workflow triggers develop branch
+        if grep -q "branches: \[ develop \]" .github/workflows/ci.yml; then
+          echo "✅ CI workflow triggers develop branch"
+        else
+          echo "❌ CI workflow missing develop branch trigger"
+          exit 1
+        fi
+        
+        # Check release workflow triggers tags
+        if grep -q "tags:" .github/workflows/release.yml; then
+          echo "✅ Release workflow triggers tags"
+        else
+          echo "❌ Release workflow missing tag trigger"
+          exit 1
+        fi
+        
+        echo "✅ Workflow triggers validated"
+
+  # Final validation summary
+  validation-summary:
+    needs: [validate-structure, validate-dependencies, validate-builds, validate-workflows]
+    runs-on: ubuntu-latest
+    name: Validation Summary
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Generate validation report
+      run: |
+        echo "🎉 PRE-RELEASE VALIDATION COMPLETE!"
+        echo "====================================="
+        echo ""
+        echo "✅ Project Structure: Validated"
+        echo "✅ Dependencies: Validated"
+        echo "✅ Build Process: Validated"
+        echo "✅ Workflow Configuration: Validated"
+        echo ""
+        echo "🚀 This develop branch is READY for release!"
+        echo "📋 Next steps:"
+        echo "   1. Create release tag (e.g., v2.0.2-beta.1)"
+        echo "   2. Release workflow will automatically build packages"
+        echo "   3. Packages will be uploaded to GitHub release"
+        echo ""
+        echo "🔒 All validations passed - Safe to proceed with release!"
+
+    - name: Comment on PR (if applicable)
+      if: github.event_name == 'pull_request'
+      uses: actions/github-script@v7
+      with:
+        script: |
+          github.rest.issues.createComment({
+            issue_number: context.issue.number,
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            body: '🎉 **Pre-Release Validation Passed!**\n\nThis PR is ready for release. All validations completed successfully:\n\n✅ Project Structure\n✅ Dependencies\n✅ Build Process\n✅ Workflow Configuration\n\n🚀 Safe to merge and create release tag!'
+          })

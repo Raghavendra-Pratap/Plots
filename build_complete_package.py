@@ -366,8 +366,66 @@ Built with ❤️ using Rust + React + Electron
     
     return True
 
+def run_validation():
+    """Run validation checks without building"""
+    print("🔍 Running comprehensive validation...")
+    print("=" * 60)
+    
+    # Check prerequisites
+    if not check_prerequisites():
+        print("❌ Prerequisites validation failed")
+        return False
+    
+    # Check project structure
+    print("📁 Validating project structure...")
+    required_dirs = ["frontend", "backend", ".github/workflows"]
+    required_files = ["requirements.txt", "frontend/package.json", "backend/Cargo.toml"]
+    
+    for dir_path in required_dirs:
+        if not Path(dir_path).exists():
+            print(f"❌ Required directory missing: {dir_path}")
+            return False
+        print(f"✅ Directory exists: {dir_path}")
+    
+    for file_path in required_files:
+        if not Path(file_path).exists():
+            print(f"❌ Required file missing: {file_path}")
+            return False
+        print(f"✅ File exists: {file_path}")
+    
+    # Check dependencies can be resolved
+    print("📦 Validating dependencies...")
+    
+    # Check Rust dependencies
+    if not run_command("cargo check", cwd="backend", check=False):
+        print("❌ Rust dependencies validation failed")
+        return False
+    print("✅ Rust dependencies valid")
+    
+    # Check Node.js dependencies
+    if not run_command("npm ci --dry-run", cwd="frontend", check=False):
+        print("❌ Node.js dependencies validation failed")
+        return False
+    print("✅ Node.js dependencies valid")
+    
+    # Check Python dependencies
+    if not run_command("python -m pip check", check=False):
+        print("❌ Python dependencies validation failed")
+        return False
+    print("✅ Python dependencies valid")
+    
+    print("\n" + "=" * 60)
+    print("🎉 All validations passed successfully!")
+    print("🚀 Project is ready for release!")
+    return True
+
 def main():
     """Main build process"""
+    # Check for validation flag
+    if "--validate-only" in sys.argv:
+        success = run_validation()
+        sys.exit(0 if success else 1)
+    
     print("🚀 Starting Unified Data Studio v2 Build Process...")
     print("=" * 60)
     

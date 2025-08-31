@@ -177,6 +177,33 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v4
     
+    - name: Setup GitHub CLI
+      run: |
+        echo "🔧 Setting up GitHub CLI for asset uploads..."
+        # Install GitHub CLI
+        if command -v apt-get &> /dev/null; then
+          # Ubuntu/Debian
+          curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg | sudo dd of=/usr/share/keyrings/githubcli-archive-keyring.gpg
+          echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main" | sudo tee /etc/apt/sources.list.d/github-cli.list > /dev/null
+          sudo apt-get update
+          sudo apt-get install gh -y
+        elif command -v brew &> /dev/null; then
+          # macOS
+          brew install gh
+        elif command -v winget &> /dev/null; then
+          # Windows
+          winget install GitHub.cli
+        else
+          # Fallback: download binary
+          curl -fsSL https://github.com/cli/cli/releases/latest/download/gh_linux_amd64.tar.gz | tar -xz
+          sudo mv gh_linux_amd64/bin/gh /usr/local/bin/
+        fi
+        
+        # Authenticate with GitHub token
+        echo "${{ secrets.GITHUB_TOKEN }}" | gh auth login --with-token
+        
+        echo "✅ GitHub CLI setup complete"
+    
     - name: Download all build artifacts
       uses: actions/download-artifact@v4
       with:
@@ -207,9 +234,26 @@ jobs:
           - SQLite database integration
           
           ### 📦 Downloads
-          - Windows: `.exe` installer
-          - macOS: `.dmg` package
-          - Linux: `.AppImage` package
+          **Choose your platform:**
+          
+          🪟 **Windows Users**
+          - Download the `.exe` installer
+          - Run the installer and follow the setup wizard
+          
+          🍎 **macOS Users**
+          - Download the `.dmg` package
+          - Drag the app to your Applications folder
+          
+          🐧 **Linux Users**
+          - Download the `.AppImage` file
+          - Make it executable: `chmod +x filename.AppImage`
+          - Run: `./filename.AppImage`
+          
+          ### 🎯 User Experience Improvements
+          - **Individual downloads** - No more large compressed archives
+          - **Platform-specific packages** - Optimized for each OS
+          - **Faster downloads** - Only download what you need
+          - **Easier installation** - Direct platform installers
           
           ### 🐛 Bug Fixes
           - Fixed UI rendering issues
@@ -217,9 +261,9 @@ jobs:
           - Enhanced error handling
           
           ### 📋 Installation
-          1. Download the appropriate package for your platform
-          2. Run the installer/package
-          3. Launch Data Studio v2
+          1. **Download** the appropriate package for your platform (above)
+          2. **Install** using platform-specific method
+          3. **Launch** Data Studio v2
           
           ### 🔄 Auto-updates
           The app will automatically check for updates and notify you when new versions are available.
@@ -249,27 +293,82 @@ jobs:
         echo "macOS packages:"
         ls -la artifacts/macos-latest-packages/ || echo "No macos packages found"
     
-    - name: Create Release Assets Archive
+    - name: Upload Individual Platform Assets
       run: |
-        echo "Creating release assets archive..."
-        cd artifacts
-        tar -czf ../release-assets.tar.gz .
-        cd ..
-        echo "Release assets archive created:"
-        ls -la release-assets.tar.gz
-    
-    - name: Upload Release Assets
-      uses: actions/upload-release-asset@v1
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      with:
-        upload_url: ${{ steps.create_release.outputs.upload_url }}
-        asset_path: release-assets.tar.gz
-        asset_name: all-platform-assets.tar.gz
-        asset_content_type: application/gzip
+        echo "🚀 Uploading individual platform assets..."
+        
+        # Upload Windows assets
+        if [ -d "artifacts/windows-latest-packages" ]; then
+          echo "📦 Uploading Windows assets..."
+          for file in artifacts/windows-latest-packages/*; do
+            if [ -f "$file" ]; then
+              echo "   Uploading: $(basename "$file")"
+              # Extract file extension for content type
+              ext="${file##*.}"
+              case "$ext" in
+                "exe") content_type="application/vnd.microsoft.portable-executable" ;;
+                "msi") content_type="application/x-msi" ;;
+                "zip") content_type="application/zip" ;;
+                *) content_type="application/octet-stream" ;;
+              esac
+              
+              # Upload using GitHub CLI or curl
+              gh release upload "${{ github.ref_name }}" "$file" \
+                --repo "${{ github.repository }}" \
+                --clobber
+            fi
+          done
+        fi
+        
+        # Upload macOS assets
+        if [ -d "artifacts/macos-latest-packages" ]; then
+          echo "🍎 Uploading macOS assets..."
+          for file in artifacts/macos-latest-packages/*; do
+            if [ -f "$file" ]; then
+              echo "   Uploading: $(basename "$file")"
+              ext="${file##*.}"
+              case "$ext" in
+                "dmg") content_type="application/x-apple-diskimage" ;;
+                "pkg") content_type="application/x-newton-compatible-pkg" ;;
+                "zip") content_type="application/zip" ;;
+                *) content_type="application/octet-stream" ;;
+              esac
+              
+              gh release upload "${{ github.ref_name }}" "$file" \
+                --repo "${{ github.repository }}" \
+                --clobber
+            fi
+          done
+        fi
+        
+        # Upload Linux assets
+        if [ -d "artifacts/ubuntu-latest-packages" ]; then
+          echo "🐧 Uploading Linux assets..."
+          for file in artifacts/ubuntu-latest-packages/*; do
+            if [ -f "$file" ]; then
+              echo "   Uploading: $(basename "$file")"
+              ext="${file##*.}"
+              case "$ext" in
+                "AppImage") content_type="application/x-executable" ;;
+                "deb") content_type="application/vnd.debian.binary-package" ;;
+                "rpm") content_type="application/x-rpm" ;;
+                "zip") content_type="application/zip" ;;
+                "tar.gz") content_type="application/gzip" ;;
+                *) content_type="application/octet-stream" ;;
+              esac
+              
+              gh release upload "${{ github.ref_name }}" "$file" \
+                --repo "${{ github.repository }}" \
+                --clobber
+            fi
+          done
+        fi
+        
+        echo "✅ All platform assets uploaded individually!"
     
     - name: Notify release completion
       run: |
         echo "🎉 Release ${{ github.ref_name }} completed successfully!"
-        echo "📦 All platform assets uploaded to GitHub release"
+        echo "📦 Individual platform assets uploaded to GitHub release"
+        echo "🎯 Users can now download only what they need"
         echo "🔄 Auto-updates will be available to users"

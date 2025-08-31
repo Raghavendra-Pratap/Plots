@@ -218,6 +218,65 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v4
 
+    - name: Validate version naming conventions
+      run: |
+        echo "🏷️ Validating version naming conventions..."
+        echo "============================================="
+        
+        # Check if this is a tag push (release)
+        if [[ "${{ github.ref }}" == refs/tags/* ]]; then
+          TAG_NAME="${GITHUB_REF#refs/tags/}"
+          echo "🔍 Analyzing tag: $TAG_NAME"
+          
+          # Validate tag format
+          if [[ "$TAG_NAME" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "⚠️  WARNING: This looks like a STABLE release tag!"
+            echo "   Tag format: $TAG_NAME"
+            echo "   Consider using beta/rc suffix for testing releases"
+            echo "   Examples: v2.0.1-beta, v2.0.1-rc.1, v2.0.1-alpha"
+            echo ""
+            echo "   Are you sure you want to release v$TAG_NAME as stable?"
+            echo "   If this is intentional, the workflow will continue."
+            echo "   If this is accidental, cancel the workflow now!"
+            
+            # For stable releases, add extra validation
+            echo ""
+            echo "🔒 Extra validation for stable release..."
+            echo "   - All CI tests must pass"
+            echo "   - All validations must pass"
+            echo "   - Code review should be complete"
+            
+          elif [[ "$TAG_NAME" =~ ^v[0-9]+\.[0-9]+\.[0-9]+-(beta|rc|alpha|dev) ]]; then
+            echo "✅ This is a testing release tag: $TAG_NAME"
+            echo "   Safe to proceed - users will know it's for testing"
+            
+          elif [[ "$TAG_NAME" =~ ^v[0-9]+\.[0-9]+\.[0-9]+ ]]; then
+            echo "⚠️  WARNING: Unusual tag format: $TAG_NAME"
+            echo "   Consider using standard formats:"
+            echo "   - v2.0.1-beta (testing)"
+            echo "   - v2.0.1-rc.1 (release candidate)"
+            echo "   - v2.0.1 (stable)"
+            
+          else
+            echo "❌ Invalid tag format: $TAG_NAME"
+            echo "   Expected format: vX.Y.Z[-suffix]"
+            echo "   Examples: v2.0.1, v2.0.1-beta, v2.0.1-rc.1"
+            exit 1
+          fi
+        else
+          echo "✅ This is a branch push, not a release tag"
+          echo "   Tag validation will happen when you create a release"
+        fi
+        
+        echo ""
+        echo "📋 Tag Naming Guidelines:"
+        echo "   • v2.0.1-beta     = Beta testing release"
+        echo "   • v2.0.1-rc.1     = Release candidate"
+        echo "   • v2.0.1-alpha    = Alpha testing"
+        echo "   • v2.0.1          = Stable production release"
+        echo ""
+        echo "💡 Best Practice: Start with beta tags, then rc, then stable"
+
     - name: Generate validation report
       run: |
         echo "🎉 PRE-RELEASE VALIDATION COMPLETE!"
@@ -227,14 +286,19 @@ jobs:
         echo "✅ Dependencies: Validated"
         echo "✅ Build Process: Validated"
         echo "✅ Workflow Configuration: Validated"
+        echo "✅ Version Naming: Validated"
         echo ""
         echo "🚀 This develop branch is READY for release!"
         echo "📋 Next steps:"
-        echo "   1. Create release tag (e.g., v2.0.2-beta.1)"
+        echo "   1. Create release tag (e.g., v2.0.1-beta.1)"
         echo "   2. Release workflow will automatically build packages"
         echo "   3. Packages will be uploaded to GitHub release"
         echo ""
         echo "🔒 All validations passed - Safe to proceed with release!"
+        echo ""
+        echo "⚠️  REMEMBER: Choose your tag carefully!"
+        echo "   - v2.0.1-beta = Safe testing release"
+        echo "   - v2.0.1      = Production stable release (be careful!)"
 
     - name: Comment on PR (if applicable)
       if: github.event_name == 'pull_request'
@@ -245,5 +309,5 @@ jobs:
             issue_number: context.issue.number,
             owner: context.repo.owner,
             repo: context.repo.repo,
-            body: '🎉 **Pre-Release Validation Passed!**\n\nThis PR is ready for release. All validations completed successfully:\n\n✅ Project Structure\n✅ Dependencies\n✅ Build Process\n✅ Workflow Configuration\n\n🚀 Safe to merge and create release tag!'
+            body: '🎉 **Pre-Release Validation Passed!**\n\nThis PR is ready for release. All validations completed successfully:\n\n✅ Project Structure\n✅ Dependencies\n✅ Build Process\n✅ Workflow Configuration\n✅ Version Naming\n\n🚀 Safe to merge and create release tag!\n\n⚠️ **Tag Naming Reminder:**\n- Use `v2.0.1-beta` for testing releases\n- Use `v2.0.1` only for stable production releases'
           })

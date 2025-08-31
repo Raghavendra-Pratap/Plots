@@ -12,7 +12,61 @@ on:
         default: '2.0.1'
 
 jobs:
+  # Validate release tag naming
+  validate-tag:
+    runs-on: ubuntu-latest
+    name: Tag Validation
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Validate tag naming
+      run: |
+        echo "🏷️ Validating release tag naming..."
+        echo "====================================="
+        
+        # Extract tag name from GITHUB_REF
+        TAG_NAME="${GITHUB_REF#refs/tags/}"
+        echo "🔍 Release tag: $TAG_NAME"
+        
+        # Check if this is a stable release (no suffix)
+        if [[ "$TAG_NAME" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+          echo "⚠️  WARNING: STABLE RELEASE DETECTED!"
+          echo "   Tag: $TAG_NAME"
+          echo "   This will be treated as a production-ready release"
+          echo ""
+          echo "🔒 Extra validation required for stable release..."
+          echo "   - All CI tests must have passed"
+          echo "   - All validations must have passed"
+          echo "   - Code review should be complete"
+          echo "   - Testing should be thorough"
+          echo ""
+          echo "✅ Proceeding with stable release build..."
+          
+        elif [[ "$TAG_NAME" =~ ^v[0-9]+\.[0-9]+\.[0-9]+-(beta|rc|alpha|dev) ]]; then
+          echo "✅ Testing release detected: $TAG_NAME"
+          echo "   Safe to proceed - users will know this is for testing"
+          
+        else
+          echo "❌ Invalid tag format: $TAG_NAME"
+          echo "   Expected format: vX.Y.Z[-suffix]"
+          echo "   Examples: v2.0.1, v2.0.1-beta, v2.0.1-rc.1"
+          echo ""
+          echo "💡 Tag Naming Guidelines:"
+          echo "   • v2.0.1-beta     = Beta testing release"
+          echo "   • v2.0.1-rc.1     = Release candidate"
+          echo "   • v2.0.1-alpha    = Alpha testing"
+          echo "   • v2.0.1          = Stable production release"
+          exit 1
+        fi
+        
+        echo ""
+        echo "🚀 Tag validation passed - proceeding with release build!"
+
+  # Build packages (depends on tag validation)
   build-packages:
+    needs: validate-tag
     strategy:
       matrix:
         platform: [ubuntu-latest, windows-latest, macos-latest]

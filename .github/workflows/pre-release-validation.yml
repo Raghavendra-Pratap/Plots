@@ -1,4 +1,4 @@
-name: Pre-Release Validation
+name: Unified Data Studio v2 Pre-Release Validation
 
 on:
   push:

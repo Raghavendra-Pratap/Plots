@@ -1,0 +1,63 @@
+[package]
+name = "unified-data-studio-backend"
+version = "2.0.0"
+edition = "2021"
+authors = ["Unified Data Studio Team"]
+description = "High-performance backend for Unified Data Studio v2"
+license = "MIT"
+
+[dependencies]
+# Web framework
+actix-web = "4.4"
+actix-cors = "0.6"
+
+# Async runtime
+tokio = { version = "1.0", features = ["full"] }
+
+# Serialization
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+
+# Data processing - simplified for initial build
+polars = { version = "0.50", features = ["lazy", "csv", "json", "parquet"] }
+ndarray = "0.16"
+# datafusion = "49.0"  # Commented out for initial build
+
+# Database - simplified for initial build
+sqlx = { version = "0.8", features = ["runtime-tokio-rustls", "sqlite"] }
+# diesel = { version = "2.2", features = ["sqlite"] }  # Commented out for initial build
+
+# Error handling
+anyhow = "1.0"
+thiserror = "1.0"
+
+# Logging
+tracing = "0.1"
+tracing-subscriber = "0.3"
+
+# Configuration
+config = "0.15"
+dotenv = "0.15"
+
+# Utilities
+chrono = { version = "0.4", features = ["serde"] }
+uuid = { version = "1.8", features = ["v4", "serde"] }
+futures = "0.3"
+
+# Workflow engine - using custom implementation for now
+# temporal-sdk = "1.0"  # Not available, using custom workflow engine
+
+[dev-dependencies]
+actix-rt = "2.9"
+tokio-test = "0.4"
+
+[[bin]]
+name = "backend"
+path = "src/main.rs"
+
+[profile.release]
+opt-level = 3
+lto = true
+codegen-units = 1
+panic = "abort"
+strip = true

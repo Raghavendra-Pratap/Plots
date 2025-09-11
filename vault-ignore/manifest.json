@@ -1,0 +1,11 @@
+{
+	"id": "vault-ignore",
+	"name": "Vault Ignore",
+	"version": "1.0.0",
+	"minAppVersion": "0.15.0",
+	"description": "A plugin that provides .gitignore-like functionality for Obsidian vaults, allowing you to exclude files, folders, extensions, and keywords from indexing and search.",
+	"author": "Your Name",
+	"authorUrl": "",
+	"fundingUrl": "",
+	"isDesktopOnly": false
+}

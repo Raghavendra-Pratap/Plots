@@ -1,0 +1,41 @@
+[package]
+name = "uds-desktop"
+version = "0.1.0"
+edition = "2021"
+
+[[bin]]
+name = "uds-desktop"
+path = "src/main.rs"
+
+[dependencies]
+# GUI Framework
+eframe = "0.26"
+egui = "0.26"
+egui_plot = "0.26"
+
+# Data Processing
+polars = { version = "0.40", features = ["lazy", "csv", "excel", "json", "parquet"] }
+csv = "1.3"
+calamine = "0.22"  # Excel reading
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+
+# File Handling
+walkdir = "2.4"
+mime_guess = "2.0"
+
+# Utilities
+chrono = { version = "0.4", features = ["serde"] }
+uuid = { version = "1.0", features = ["v4", "serde"] }
+anyhow = "1.0"
+thiserror = "1.0"
+env_logger = "0.11"
+
+# Async Runtime (if needed for large file processing)
+tokio = { version = "1.0", features = ["full"] }
+
+[profile.release]
+opt-level = 3
+lto = true
+codegen-units = 1
+panic = "abort"

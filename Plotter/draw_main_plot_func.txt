@@ -1,0 +1,164 @@
+def draw_main_plot(idx):
+    try:
+        main_ax.clear()
+        img_id = image_ids[idx]
+        df_selected = df[df['image_id'] == img_id].copy()
+        
+        # Get the annotation state early to avoid scope issues
+        state = annotation_states[img_id]
+        
+        if df_selected.empty or df_selected['x_min'].isna().all():
+            main_ax.text(0.5, 0.5, "No bounding box data available", 
+                         ha='center', va='center', transform=main_ax.transAxes, fontsize=12)
+            main_ax.set_title(f'Bounding Boxes for image_id: {img_id}')
+            main_ax.set_xticks([])
+            main_ax.set_yticks([])
+            fig.canvas.draw_idle()
+            return
+
+        df_selected['width'] = df_selected['x_max'] - df_selected['x_min']
+        df_selected['height'] = df_selected['y_max'] - df_selected['y_min']
+        df_selected['area'] = df_selected['width'] * df_selected['height']
+        df_selected['center_x'] = (df_selected['x_min'] + df_selected['x_max']) / 2
+        df_selected['center_y'] = (df_selected['y_min'] + df_selected['y_max']) / 2
+        for _, row in df_selected.iterrows():
+            rect = patches.Rectangle(
+                (row['x_min'], row['y_min']),
+                row['width'],
+                row['height'],
+                linewidth=1,
+                edgecolor='r',
+                facecolor='none',
+                zorder=1  # Low z-order so markers appear on top
+            )
+            main_ax.add_patch(rect)
+        
+        x_min_all = df_selected['x_min'].min() if not df_selected['x_min'].isnull().all() else 0
+        x_max_all = df_selected['x_max'].max() if not df_selected['x_max'].isnull().all() else 100
+        y_min_all = df_selected['y_min'].min() if not df_selected['y_min'].isnull().all() else 0
+        y_max_all = df_selected['y_max'].max() if not df_selected['y_max'].isnull().all() else 100
+
+        # Set axis limits
+        main_ax.set_xlim(x_min_all - 10, x_max_all + 10)
+        
+        # Apply Y-axis flip if enabled
+        if y_axis_flipped[0]:
+            main_ax.set_ylim(y_max_all + 10, y_min_all - 10)
+        else:
+            main_ax.set_ylim(y_min_all - 10, y_max_all + 10)
+        
+        # Add background image if enabled and available
+        if show_background_image[0] and state.image_url:
+            try:
+                # Load image if not already loaded
+                if state.image_url not in loaded_images:
+                    img_array = load_image_from_url(state.image_url)
+                    if img_array is not None:
+                        loaded_images[state.image_url] = img_array
+                    else:
+                        print(f"Could not load image from {state.image_url}")
+                        loaded_images[state.image_url] = None
+                
+                # Display background image
+                if loaded_images.get(state.image_url) is not None:
+                    img_array = loaded_images[state.image_url]
+                    # Invert y-axis for image display (matplotlib vs image coordinates)
+                    main_ax.imshow(img_array, extent=[x_min_all - 10, x_max_all + 10, y_min_all - 10, y_max_all + 10], 
+                                 alpha=0.7, zorder=0)
+                    main_ax.set_title(f'Bounding Boxes for image_id: {img_id} (with background image)')
+                else:
+                    main_ax.set_title(f'Bounding Boxes for image_id: {img_id}')
+            except Exception as e:
+                print(f"Error displaying background image: {e}")
+                main_ax.set_title(f'Bounding Boxes for image_id: {img_id}')
+        else:
+            main_ax.set_title(f'Bounding Boxes for image_id: {img_id}')
+        
+        main_ax.set_xlabel('X')
+        main_ax.set_ylabel('Y')
+        
+        # Synchronize radio button with current state mode
+        if radio.value_selected != state.mode:
+            radio.set_active(0 if state.mode == 'x' else 1)
+        
+        # Clear existing markers safely
+        for marker, *_ in getattr(state, 'markers', []):
+            try:
+                if marker and marker in main_ax.get_children():
+                    marker.remove()
+            except (NotImplementedError, ValueError):
+                pass  # Ignore errors when removing already removed artists
+        state.markers.clear()
+        
+        # Clear hover text safely
+        if state.hover_text:
+            try:
+                if state.hover_text in main_ax.get_children():
+                    state.hover_text.remove()
+            except (NotImplementedError, ValueError):
+                pass
+            state.hover_text = None
+        
+        # Draw existing annotations (only for new annotations, not existing CSV marks)
+        for ann in state.annotations:
+            x, y = ann['x'], ann['y']
+            mark_value = ann.get('mark_value', '')
+            
+            # Check if this annotation corresponds to an existing CSV mark
+            # If so, skip drawing it to avoid duplicates
+            skip_drawing = False
+            if 'marked' in df.columns:
+                for _, row in df_selected.iterrows():
+                    if (row['x_min'] <= x <= row['x_max'] and 
+                        row['y_min'] <= y <= row['y_max']):
+                        existing_mark = str(row.get('marked', '')).strip()
+                        if existing_mark and existing_mark.lower() != 'nan' and existing_mark.lower() != '':
+                            skip_drawing = True
+                            break
+            
+            if not skip_drawing:
+                if state.mode == 'number' and str(mark_value).isdigit():
+                    marker, = main_ax.plot(x, y, marker=f'${mark_value}$', color='red', markersize=14, mew=2)
+                else:
+                    marker, = main_ax.plot(x, y, marker='x', color='blue', markersize=10, mew=2)
+                label_text = ', '.join(str(ann.get(label_col, '')) for label_col in label_columns)
+                state.markers.append((marker, label_text, x, y, mark_value))
+        
+        # Draw existing marks from CSV 'marked' column
+        if 'marked' in df.columns:
+            for _, row in df_selected.iterrows():
+                marked_value = str(row.get('marked', '')).strip()
+                if marked_value and marked_value.lower() != 'nan' and marked_value.lower() != '':
+                    x, y = (row['x_min'] + row['x_max']) / 2, (row['y_min'] + row['y_max']) / 2
+                    
+                    # Convert "yes" to "x" for display
+                    if marked_value.lower() == 'yes':
+                        display_value = 'x'
+                        marker_color = 'green'  # Different color for existing "yes" marks
+                        marker_size = 12
+                        # Display as X marker with high z-order
+                        marker, = main_ax.plot(x, y, marker='x', color=marker_color, markersize=marker_size, mew=2, zorder=10)
+                    else:
+                        display_value = marked_value
+                        marker_color = 'purple'  # Different color for other existing marks
+                        # Display as text (no X marker) with high z-order
+                        marker = main_ax.text(x, y, display_value, color=marker_color, fontsize=12, 
+                                            ha='center', va='center', weight='bold', zorder=10)
+                    
+                    # Add to markers list for hover functionality
+                    label_text = ', '.join(str(row.get(label_col, '')) for label_col in label_columns)
+                    state.markers.append((marker, label_text, x, y, marked_value))
+            
+        highlight_thumbnail(idx)
+        fig.canvas.draw_idle()
+    except Exception as e:
+        print(f"Error in draw_main_plot: {e}")
+        # Try to recover by redrawing
+        try:
+            main_ax.clear()
+            main_ax.text(0.5, 0.5, f"Error displaying plot: {e}", 
+                         ha='center', va='center', transform=main_ax.transAxes, fontsize=10, color='red')
+            fig.canvas.draw_idle()
+        except:
+            pass
+

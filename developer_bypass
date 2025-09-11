@@ -1,0 +1,60 @@
+# Developer Bypass File
+# This file defines patterns for files and folders to ALWAYS include in your Obsidian vault
+# These patterns will bypass ALL ignore rules
+# Format: One pattern per line, # for comments
+
+# =============================================================================
+# ALWAYS INCLUDE PATTERNS
+# =============================================================================
+
+# Essential project files (bypass all ignore rules)
+!**/README.md
+!**/CHANGELOG.md
+!**/LICENSE
+!**/CONTRIBUTING.md
+!**/FEATURES.md
+
+# Important configuration files
+!**/package.json
+!**/Cargo.toml
+!**/requirements.txt
+!**/setup.py
+!**/tsconfig.json
+!**/tailwind.config.js
+!**/postcss.config.js
+
+# Documentation directories
+!**/docs/**
+!**/documentation/**
+!**/notes/**
+
+# Important project documentation
+!**/Data Studio - master.md
+!**/Data Studio + Playground - Master P.md
+!**/Playground – Master Plan.md
+
+# =============================================================================
+# BYPASS EXAMPLES (Uncomment to use)
+# =============================================================================
+
+# If you want to include specific files despite ignore rules, add them here:
+# !**/important-file.md
+# !**/special-documentation/**
+# !**/project-specific/important-docs/**
+
+# =============================================================================
+# BYPASS FOR SPECIFIC PROJECTS
+# =============================================================================
+
+# If you want to include entire projects despite ignore rules:
+# !**/my-important-project/**
+# !**/special-docs/**
+
+# =============================================================================
+# BYPASS FOR SPECIFIC FILE TYPES
+# =============================================================================
+
+# If you want to include specific file types despite ignore rules:
+# !**/*.important
+# !**/*.special
+# !**/*.critical

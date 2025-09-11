@@ -1,0 +1,82 @@
+{
+  "name": "bounding-box-plotter-desktop",
+  "version": "1.0.0",
+  "description": "Desktop application for Bounding Box Plotter",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "build": "npm run build-react && electron-builder",
+    "build-react": "cd .. && npm run build",
+    "pack": "electron-builder --dir",
+    "dist": "electron-builder",
+    "dist:win": "electron-builder --win",
+    "dist:mac": "electron-builder --mac",
+    "dist:linux": "electron-builder --linux"
+  },
+  "build": {
+    "appId": "com.yourcompany.boundingboxplotter",
+    "productName": "Bounding Box Plotter",
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "main.js",
+      "preload.js",
+      "../build/**/*",
+      "node_modules/**/*"
+    ],
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": ["x64", "ia32"]
+        },
+        {
+          "target": "portable",
+          "arch": ["x64", "ia32"]
+        }
+      ],
+      "icon": "assets/icon.ico"
+    },
+    "mac": {
+      "target": [
+        {
+          "target": "dmg",
+          "arch": ["x64", "arm64"]
+        }
+      ],
+      "icon": "assets/icon.icns",
+      "category": "public.app-category.graphics-design"
+    },
+    "linux": {
+      "target": [
+        {
+          "target": "AppImage",
+          "arch": ["x64", "ia32", "armv7l", "arm64"]
+        },
+        {
+          "target": "deb",
+          "arch": ["x64", "ia32", "armv7l", "arm64"]
+        },
+        {
+          "target": "rpm",
+          "arch": ["x64", "ia32", "armv7l", "arm64"]
+        }
+      ],
+      "icon": "assets/icon.png"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true
+    }
+  },
+  "devDependencies": {
+    "electron": "^25.0.0",
+    "electron-builder": "^24.6.4"
+  },
+  "dependencies": {
+    "electron-updater": "^6.1.7"
+  }
+} 

@@ -1,0 +1,6 @@
+product_category,total_revenue,avg_order_value,order_count,total_quantity,unique_customers
+Books,889208.15,4275.04,208,1001,205
+Clothing,855425.23,4172.81,205,1022,199
+Electronics,887843.06,4600.22,193,941,192
+Home,847109.96,4193.61,202,977,199
+Sports,793805.68,4134.4,192,975,188

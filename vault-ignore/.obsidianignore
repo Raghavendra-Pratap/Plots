@@ -1,0 +1,47 @@
+# Example .obsidianignore file
+# This file defines patterns for files and folders to ignore in your Obsidian vault
+
+# Development files
+**/node_modules/**
+**/.git/**
+**/dist/**
+**/build/**
+**/.vscode/**
+**/.idea/**
+
+# System files
+**/.DS_Store
+**/Thumbs.db
+**/desktop.ini
+
+# Log files
+**/*.log
+**/*.logs
+
+# Temporary files
+**/*.tmp
+**/*.temp
+**/*.cache
+**/*.lock
+
+# Backup files
+**/*.bak
+**/*.backup
+**/*~
+
+# Archive files
+**/*.zip
+**/*.tar.gz
+**/*.rar
+
+# Media files (uncomment if you want to ignore them)
+# **/*.mp4
+# **/*.avi
+# **/*.mov
+# **/*.mp3
+# **/*.wav
+
+# Large data files (uncomment if you want to ignore them)
+# **/*.csv
+# **/*.json
+# **/*.xml

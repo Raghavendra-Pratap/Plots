@@ -1,0 +1,71 @@
+def generate_thumbnail(df_selected):
+    """Generate a thumbnail image for the given DataFrame selection"""
+    # Skip if df_selected is empty or all bounding box columns are NaN
+    if df_selected.empty or df_selected['x_min'].isna().all() or df_selected['x_max'].isna().all() or df_selected['y_min'].isna().all() or df_selected['y_max'].isna().all():
+        print(f"[Warning] Skipping thumbnail: No valid bounding box data for image_id: {df_selected['image_id'].iloc[0] if not df_selected.empty else 'N/A'}")
+        fig, ax = plt.subplots(figsize=(2.5, 2.5))
+        ax.axis('off')
+        fig.canvas.draw()
+        img = np.array(fig.canvas.renderer.buffer_rgba())
+        plt.close(fig)
+        return img
+    
+    # Apply quality settings - but maintain consistent thumbnail size
+    if global_settings.get('high_quality_thumbnails', True):
+        figsize = (2.5, 2.5)  # Keep consistent size regardless of quality
+        linewidth = 1.2
+        fontsize = 9
+        marker_size = 10
+    else:
+        figsize = (2.5, 2.5)  # Keep consistent size regardless of quality
+        linewidth = 0.8
+        fontsize = 7
+        marker_size = 8
+    
+    fig, ax = plt.subplots(figsize=figsize)
+    
+    for _, row in df_selected.dropna(subset=['x_min', 'x_max', 'y_min', 'y_max']).iterrows():
+        rect = patches.Rectangle(
+            (row['x_min'], row['y_min']),
+            row['x_max'] - row['x_min'],
+            row['y_max'] - row['y_min'],
+            linewidth=linewidth,
+            edgecolor='r',
+            facecolor='none',
+            zorder=1  # Low z-order so markers appear on top
+        )
+        ax.add_patch(rect)
+        
+        # Add existing marks from CSV 'marked' column to thumbnails
+        if 'marked' in df.columns:
+            marked_value = str(row.get('marked', '')).strip()
+            if marked_value and marked_value.lower() != 'nan' and marked_value.lower() != '':
+                x, y = (row['x_min'] + row['x_max']) / 2, (row['y_min'] + row['y_max']) / 2
+                
+                # Convert "yes" to "x" for display
+                if marked_value.lower() == 'yes':
+                    display_value = 'x'
+                    marker_color = 'green'
+                    # Display as X marker with high z-order
+                    ax.plot(x, y, marker='x', color=marker_color, markersize=marker_size, mew=1, zorder=10)
+                else:
+                    display_value = marked_value
+                    marker_color = 'purple'
+                    # Display as text (no X marker) with high z-order
+                    ax.text(x, y, display_value, color=marker_color, fontsize=fontsize, 
+                           ha='center', va='center', zorder=10)
+    
+    ax.set_xlim(df_selected['x_min'].min()-10, df_selected['x_max'].max()+10)
+    
+    # Apply Y-axis flip if enabled
+    if y_axis_flipped[0]:
+        ax.set_ylim(df_selected['y_max'].max()+10, df_selected['y_min'].min()-10)
+    else:
+        ax.set_ylim(df_selected['y_min'].min()-10, df_selected['y_max'].max()+10)
+    
+    ax.axis('off')
+    fig.canvas.draw()
+    img = np.array(fig.canvas.renderer.buffer_rgba())
+    plt.close(fig)
+    return img
+

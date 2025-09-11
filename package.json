@@ -1,0 +1,16 @@
+{
+  "name": "unified-data-studio",
+  "version": "1.0.0",
+  "description": "Unified Data Studio - Advanced data processing and analysis platform",
+  "main": "unified-data-studio-v2/unified-data-studio-v2-package/electron.js",
+  "homepage": "./",
+  "private": true,
+  "scripts": {
+    "start": "cd unified-data-studio-v2/frontend && npm start",
+    "build": "cd unified-data-studio-v2/frontend && npm run build",
+    "test": "cd unified-data-studio-v2/frontend && npm test",
+    "eject": "cd unified-data-studio-v2/frontend && npm run eject",
+    "electron": "cd unified-data-studio-v2/unified-data-studio-v2-package && npm run electron",
+    "electron-dev": "cd unified-data-studio-v2/frontend && npm run electron-dev"
+  }
+}

@@ -1,0 +1,93 @@
+def onclick_main(event):
+    if event.button != 1:  # Only handle left clicks
+        return
+    
+
+    
+    # Inline website link handling removed - simplified to single link approach
+    
+    # Handle help link clicks
+    if 'help_text_box' in globals() and help_text_box and hasattr(help_text_box, 'all_links'):
+        for link_type, shortcut, link_text in help_text_box.all_links:
+            if event.inaxes == link_text.axes:
+                # Check if click is within the link text bounds
+                bbox = link_text.get_bbox_patch()
+                if bbox and bbox.contains(event.x, event.y):
+                    print(f"🔍 Help link clicked: {link_type} - {shortcut}")
+                    handle_help_link_click(link_type, shortcut)
+                    return
+    
+
+    
+    # Handle thumbnail clicks
+    for i, ax in enumerate(thumb_axes):
+        if event.inaxes == ax:
+            current_image_idx[0] = i
+            draw_main_plot(i)
+            update_thumbnail_visibility()
+            return
+    
+    # Handle main plot clicks for annotations
+    if event.inaxes != main_ax:
+        print(f"🔍 Click outside main plot. Clicked on: {event.inaxes}")
+        print(f"🔍 Website button ax: {btn_website.ax if btn_website else 'None'}")
+        
+        # Check if it's a website button click first (only if button exists)
+        if btn_website and hasattr(btn_website, 'ax') and event.inaxes == btn_website.ax:
+            print("🔍 Website button clicked via onclick_main")
+            on_website_button_click()
+            return
+        
+        # Hide help page if clicking outside main plot
+        hide_help_page()
+        return
+        
+    idx = current_image_idx[0]
+    img_id = image_ids[idx]
+    df_selected = df[df['image_id'] == img_id].copy()
+    state = annotation_states[img_id]
+    x, y = event.xdata, event.ydata
+    
+    if df_selected.empty or df_selected['x_min'].isna().all():
+        return
+        
+    label_text = None
+    annotation_entry = {'image_id': img_id, 'x': x, 'y': y}
+    mark_value = ''
+
+    clicked_bb_index = None
+    for idx_row, row in df_selected.iterrows():
+        if row['x_min'] <= x <= row['x_max'] and row['y_min'] <= y <= row['y_max']:
+            clicked_bb_index = row.name
+            break
+    
+    if clicked_bb_index is not None:
+        row = df.loc[clicked_bb_index]
+        
+        # Check if this bounding box already has a mark in the CSV
+        existing_mark = str(row.get('marked', '')).strip()
+        if existing_mark and existing_mark.lower() != 'nan' and existing_mark.lower() != '':
+            print(f"⚠ Bounding box already marked as '{existing_mark}' - cannot add new annotation")
+            return
+        
+        # Proceed with new annotation only if no existing mark
+        if state.mode == 'number':
+            mark_value = str(state.counter)
+            df.loc[row.name, 'marked'] = mark_value
+            annotation_entry['mark_value'] = mark_value
+            state.counter += 1
+            print(f"Added number annotation: {mark_value} at ({x:.1f}, {y:.1f})")
+        else:
+            mark_value = 'x'
+            df.loc[row.name, 'marked'] = 'yes'
+            annotation_entry['mark_value'] = mark_value
+            print(f"Added X annotation at ({x:.1f}, {y:.1f})")
+        
+        for label_col in label_columns:
+            annotation_entry[label_col] = row[label_col]
+        
+        state.annotations.append(annotation_entry)
+        
+        draw_main_plot(current_image_idx[0])
+        state.undone.clear()
+

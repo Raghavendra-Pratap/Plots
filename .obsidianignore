@@ -1,0 +1,234 @@
+# Obsidian Vault Ignore File
+# This file defines patterns for files and folders to ignore in your Obsidian vault
+# Based on analysis of your Developer directory structure
+
+# =============================================================================
+# DEVELOPMENT DEPENDENCIES & PACKAGES
+# =============================================================================
+
+# Node.js dependencies
+**/node_modules/**
+**/npm-debug.log*
+**/yarn-debug.log*
+**/yarn-error.log*
+**/lerna-debug.log*
+**/package-lock.json
+**/yarn.lock
+
+# Python dependencies
+**/venv/**
+**/env/**
+**/__pycache__/**
+**/*.pyc
+**/*.pyo
+**/*.pyd
+**/.Python
+**/*.so
+**/.pytest_cache/**
+**/.coverage
+**/htmlcov/**
+**/.tox/**
+**/.cache
+**/nosetests.xml
+**/coverage.xml
+**/*.cover
+**/.hypothesis/**
+
+# Rust dependencies
+**/target/**
+**/Cargo.lock
+**/*.rlib
+**/*.rmeta
+
+# =============================================================================
+# BUILD OUTPUTS & ARTIFACTS
+# =============================================================================
+
+# General build outputs
+**/build/**
+**/dist/**
+**/out/**
+**/app/**
+
+# Electron build outputs
+**/*.dmg
+**/*.exe
+**/*.AppImage
+**/*.deb
+**/*.rpm
+
+# Python build outputs
+**/*.egg-info/**
+**/*.egg
+
+# Package files
+**/*.tgz
+**/*.tar.gz
+**/*.zip
+**/*.rar
+
+# =============================================================================
+# BACKUP & TEMPORARY DIRECTORIES
+# =============================================================================
+
+# Backup directories (based on your structure)
+**/bounding-box-plotter-backup/**
+**/conflicting-apps-backup/**
+**/global-node-modules-backup/**
+**/electron-bundle/**
+
+# Temporary directories
+**/tmp/**
+**/temp/**
+**/tmp_playground/**
+
+# =============================================================================
+# DEVELOPMENT TOOLS & IDES
+# =============================================================================
+
+# IDE and editor files
+**/.vscode/**
+**/.idea/**
+**/*.swp
+**/*.swo
+**/*~
+**/.DS_Store
+**/.DS_Store?
+**/._*
+**/.Spotlight-V100
+**/.Trashes
+**/ehthumbs.db
+**/Thumbs.db
+
+# =============================================================================
+# LOGS & RUNTIME DATA
+# =============================================================================
+
+# Log files
+**/*.log
+**/logs/**
+
+# Runtime data
+**/pids
+**/*.pid
+**/*.seed
+**/*.pid.lock
+
+# =============================================================================
+# ENVIRONMENT & CONFIG FILES
+# =============================================================================
+
+# Environment variables
+**/.env
+**/.env.local
+**/.env.development.local
+**/.env.test.local
+**/.env.production.local
+
+# Temporary files
+**/*.tmp
+**/*.temp
+
+# Database files
+**/*.db
+**/*.sqlite
+**/*.sqlite3
+
+# =============================================================================
+# PROJECT-SPECIFIC EXCLUSIONS
+# =============================================================================
+
+# Large data processing directories
+**/data_processing_output/**
+
+# Test directories (optional - uncomment if you want to hide tests)
+# **/tests/**
+# **/test_*/
+# **/test pys/**
+
+# Development playground directories
+**/myScripts/PlayGround/**
+
+# =============================================================================
+# AUTO-UPDATER & PACKAGING
+# =============================================================================
+
+# Auto-updater files
+**/updates/**
+**/*.update
+
+# Build scripts (optional - uncomment if you want to hide build files)
+# **/build*.py
+# **/build*.sh
+# **/build*.js
+
+# =============================================================================
+# LARGE DATA FILES (OPTIONAL)
+# =============================================================================
+
+# Uncomment these if you want to hide large data files
+# **/*.csv
+# **/*.json
+# **/*.xml
+# **/*.parquet
+# **/*.feather
+
+# =============================================================================
+# MEDIA FILES (OPTIONAL)
+# =============================================================================
+
+# Uncomment these if you want to hide media files
+# **/*.mp4
+# **/*.avi
+# **/*.mov
+# **/*.mp3
+# **/*.wav
+# **/*.png
+# **/*.jpg
+# **/*.jpeg
+# **/*.gif
+# **/*.svg
+# **/*.pdf
+
+# =============================================================================
+# DOCUMENTATION BUILD OUTPUTS
+# =============================================================================
+
+# Documentation build outputs
+**/docs/_build/**
+**/docs/build/**
+**/site/**
+
+# =============================================================================
+# CACHE & TEMPORARY FILES
+# =============================================================================
+
+# Cache directories
+**/.cache/**
+**/cache/**
+
+# Temporary files
+**/*.bak
+**/*.backup
+**/*~
+
+# =============================================================================
+# SPECIFIC PROJECT EXCLUSIONS
+# =============================================================================
+
+# Exclude specific large projects that might clutter your vault
+# Uncomment these if you want to hide them
+# **/ParallelDots/**
+# **/Ex-comunicado/**
+# **/rpwp-dev/**
+
+# =============================================================================
+# OBSIDIAN SPECIFIC
+# =============================================================================
+
+# Obsidian plugin development files (keep the plugin itself visible)
+**/obsidian-vault-ignore/node_modules/**
+**/obsidian-vault-ignore/build.sh
+**/obsidian-vault-ignore/package*.json
+**/obsidian-vault-ignore/tsconfig.json
+**/obsidian-vault-ignore/esbuild.config.mjs

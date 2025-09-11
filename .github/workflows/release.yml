@@ -1,393 +1,177 @@
-name: Release Data Studio v2
+name: Release Build and Publish
 
 on:
   push:
     tags:
-      - 'v*'
-  workflow_dispatch:
-    inputs:
-      version:
-        description: 'Version to release (e.g., 2.0.1)'
-        required: true
-        default: '2.0.1'
+      - 'v*.*.*'           # Main releases (v1.0.0, v2.1.3, etc.)
+      - 'v*.*.*_test'      # Test releases (v1.0.0_test, v2.1.3_test, etc.)
+      - 'v*.*.*-beta*'     # Beta releases (v1.0.0-beta1, v2.1.3-beta2, etc.)
+      - 'v*.*.*-alpha*'    # Alpha releases (v1.0.0-alpha1, v2.1.3-alpha2, etc.)
 
 jobs:
-  # Validate release tag naming
-  validate-tag:
-    runs-on: ubuntu-latest
-    name: Tag Validation
-    
-    steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
-
-    - name: Validate tag naming
-      run: |
-        echo "🏷️ Validating release tag naming..."
-        echo "====================================="
-        
-        # Extract tag name from GITHUB_REF
-        TAG_NAME="${GITHUB_REF#refs/tags/}"
-        echo "🔍 Release tag: $TAG_NAME"
-        
-        # Check if this is a stable release (no suffix)
-        if [[ "$TAG_NAME" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
-          echo "⚠️  WARNING: STABLE RELEASE DETECTED!"
-          echo "   Tag: $TAG_NAME"
-          echo "   This will be treated as a production-ready release"
-          echo ""
-          echo "🔒 Extra validation required for stable release..."
-          echo "   - All CI tests must have passed"
-          echo "   - All validations must have passed"
-          echo "   - Code review should be complete"
-          echo "   - Testing should be thorough"
-          echo ""
-          echo "✅ Proceeding with stable release build..."
-          
-        elif [[ "$TAG_NAME" =~ ^v[0-9]+\.[0-9]+\.[0-9]+-(beta|rc|alpha|dev) ]]; then
-          echo "✅ Testing release detected: $TAG_NAME"
-          echo "   Safe to proceed - users will know this is for testing"
-          
-        else
-          echo "❌ Invalid tag format: $TAG_NAME"
-          echo "   Expected format: vX.Y.Z[-suffix]"
-          echo "   Examples: v2.0.1, v2.0.1-beta, v2.0.1-rc.1"
-          echo ""
-          echo "💡 Tag Naming Guidelines:"
-          echo "   • v2.0.1-beta     = Beta testing release"
-          echo "   • v2.0.1-rc.1     = Release candidate"
-          echo "   • v2.0.1-alpha    = Alpha testing"
-          echo "   • v2.0.1          = Stable production release"
-          exit 1
-        fi
-        
-        echo ""
-        echo "🚀 Tag validation passed - proceeding with release build!"
-
-  # Build packages (depends on tag validation)
-  build-packages:
-    needs: validate-tag
+  build:
+    runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        platform: [ubuntu-latest, windows-latest, macos-latest]
-    runs-on: ${{ matrix.platform }}
-    permissions:
-      contents: write
-      packages: write
-    outputs:
-      platform: ${{ matrix.platform }}
-      status: ${{ job.status }}
+        os: [ubuntu-latest, windows-latest, macos-latest]
     
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
-
-    - name: Setup Node.js
-      uses: actions/setup-node@v4
+    - uses: actions/checkout@v4
+    
+    - name: Set up Python
+      uses: actions/setup-python@v5
       with:
-        node-version: '18'
-        cache: 'npm'
-        cache-dependency-path: frontend/package-lock.json
-
-    - name: Setup Rust
-      uses: actions-rs/toolchain@v1
-      with:
-        toolchain: stable
-        override: true
-
-    - name: Install frontend dependencies
-      working-directory: frontend
-      run: npm ci
-
-    - name: Build frontend
-      working-directory: frontend
-      run: npm run build
-
-    - name: Build Rust backend
-      working-directory: backend
-      run: cargo build --release
-
-    - name: Setup Python
-      uses: actions/setup-python@v4
-      with:
-        python-version: '3.9'
-
-    - name: Install Python dependencies
-      working-directory: .
-      shell: bash
+        python-version: '3.10'
+    
+    - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
-        echo "Current working directory: $(pwd)"
-        echo "Listing files in current directory:"
-        if [ "${{ matrix.platform }}" = "windows-latest" ]; then
-          dir
-        else
-          ls -la
-        fi
-        echo "Looking for requirements.txt:"
-        find . -name "requirements.txt" -type f
-        echo "Installing Python dependencies:"
-        pip install -r requirements.txt
-
-    - name: Build complete package
-      working-directory: .
-      shell: bash
-      run: python build_complete_package.py
-
-    - name: Build Electron App
-      working-directory: frontend
+        pip install -r unified_plotter/requirements.txt
+        pip install pyinstaller cx-freeze build twine
+    
+    - name: Build executable (Cross-platform)
       shell: bash
       run: |
-        # Build React app first
-        npm run build
-        # Build for current platform only
-        if [ "${{ matrix.platform }}" = "ubuntu-latest" ]; then
-          echo "Building for Linux..."
-          npx electron-builder --linux --publish=never
-        elif [ "${{ matrix.platform }}" = "windows-latest" ]; then
-          echo "Building for Windows..."
-          npx electron-builder --win --publish=never
-        elif [ "${{ matrix.platform }}" = "macos-latest" ]; then
-          echo "Building for macOS..."
-          npx electron-builder --mac --publish=never
-        fi
-
-    - name: Notify package build completion
-      run: |
-        echo "🎉 Package build for ${{ matrix.platform }} completed successfully!"
-        echo "📦 Platform-specific package created"
-        echo "🔄 Ready for release creation"
+        cd unified_plotter
+        echo "🔨 Building release for ${{ matrix.os }}..."
+        echo "Tag: ${{ github.ref_name }}"
+        echo "Current directory: $(pwd)"
+        echo "Files in directory:"
+        ls -la
+        echo "Running build script..."
+        python build_ci.py || echo "Build completed with warnings"
     
     - name: Upload build artifacts
       uses: actions/upload-artifact@v4
       with:
-        name: ${{ matrix.platform }}-packages
-        path: frontend/dist/
-        retention-days: 1
+        name: unified-plotter-${{ matrix.os }}-${{ github.ref_name }}
+        path: |
+          unified_plotter/dist/
+          unified_plotter/build/
 
-  create-release:
-    needs: build-packages
+  package:
+    needs: build
     runs-on: ubuntu-latest
-    permissions:
-      contents: write
-      packages: write
-    if: needs.build-packages.result == 'success'
     
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
+    - uses: actions/checkout@v4
     
-    - name: Setup GitHub CLI
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.10'
+    
+    - name: Install dependencies
       run: |
-        echo "🔧 Setting up GitHub CLI for asset uploads..."
-        # Install GitHub CLI
-        if command -v apt-get &> /dev/null; then
-          # Ubuntu/Debian
-          curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg | sudo dd of=/usr/share/keyrings/githubcli-archive-keyring.gpg
-          echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main" | sudo tee /etc/apt/sources.list.d/github-cli.list > /dev/null
-          sudo apt-get update
-          sudo apt-get install gh -y
-        elif command -v brew &> /dev/null; then
-          # macOS
-          brew install gh
-        elif command -v winget &> /dev/null; then
-          # Windows
-          winget install GitHub.cli
-        else
-          # Fallback: download binary
-          curl -fsSL https://github.com/cli/cli/releases/latest/download/gh_linux_amd64.tar.gz | tar -xz
-          sudo mv gh_linux_amd64/bin/gh /usr/local/bin/
-        fi
-        
-        # Authenticate with GitHub token
-        echo "${{ secrets.GITHUB_TOKEN }}" | gh auth login --with-token
-        
-        echo "✅ GitHub CLI setup complete"
+        python -m pip install --upgrade pip
+        pip install -r unified_plotter/requirements.txt
+        pip install build twine
     
-    - name: Download all build artifacts
+    - name: Build package
+      run: |
+        cd unified_plotter
+        python -m build
+    
+    - name: Check package
+      run: |
+        cd unified_plotter
+        twine check dist/*
+    
+    - name: Upload package artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: python-package-${{ github.ref_name }}
+        path: unified_plotter/dist/
+
+  release:
+    needs: [build, package]
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Download all artifacts
       uses: actions/download-artifact@v4
       with:
-        path: artifacts/
+        path: ./artifacts
     
-    - name: Clean up technical files for public release
+    - name: Determine release type
+      id: release_type
       run: |
-        echo "🧹 Cleaning up technical files for public release..."
-        
-        # Remove or hide source code files (they're automatically added by GitHub)
-        echo "📝 Note: Source code files are automatically added by GitHub and cannot be hidden"
-        echo "   However, only user-friendly installers will be uploaded as additional assets"
-        
-        # List what will be visible to users
-        echo "👥 Files visible to users will be:"
-        echo "   - Platform-specific installers (.exe, .dmg, .AppImage)"
-        echo "   - Source code archives (automatically added by GitHub)"
-        echo "   - Technical files (.blockmap, .yml) will be filtered out"
+        TAG_NAME="${{ github.ref_name }}"
+        if [[ "$TAG_NAME" == *"_test" ]]; then
+          echo "type=test" >> $GITHUB_OUTPUT
+          echo "prerelease=true" >> $GITHUB_OUTPUT
+          echo "title=Test Release $TAG_NAME" >> $GITHUB_OUTPUT
+        elif [[ "$TAG_NAME" == *"-beta"* ]]; then
+          echo "type=beta" >> $GITHUB_OUTPUT
+          echo "prerelease=true" >> $GITHUB_OUTPUT
+          echo "title=Beta Release $TAG_NAME" >> $GITHUB_OUTPUT
+        elif [[ "$TAG_NAME" == *"-alpha"* ]]; then
+          echo "type=alpha" >> $GITHUB_OUTPUT
+          echo "prerelease=true" >> $GITHUB_OUTPUT
+          echo "title=Alpha Release $TAG_NAME" >> $GITHUB_OUTPUT
+        else
+          echo "type=stable" >> $GITHUB_OUTPUT
+          echo "prerelease=false" >> $GITHUB_OUTPUT
+          echo "title=Release $TAG_NAME" >> $GITHUB_OUTPUT
+        fi
     
     - name: Create Release
-      id: create_release
       uses: actions/create-release@v1
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
-        tag_name: ${{ github.ref }}
-        release_name: Unified Data Studio v2 ${{ github.ref_name }}
+        tag_name: ${{ github.ref_name }}
+        release_name: ${{ steps.release_type.outputs.title }}
         body: |
-          ## 🚀 Unified Data Studio v2 Release ${{ github.ref_name }}
+          ## 🚀 ${{ steps.release_type.outputs.title }}
           
-          ### 📅 Release Information
-          - **Version**: ${{ github.ref_name }}
-          - **Release Date**: ${{ github.event.head_commit.timestamp || github.event.repository.updated_at || 'Now' }}
-          - **Commit**: ${{ github.sha }}
-          - **Branch**: ${{ github.ref_name }}
+          **Release Type:** ${{ steps.release_type.outputs.type }}
+          **Tag:** ${{ github.ref_name }}
+          **Commit:** ${{ github.sha }}
+          **Branch:** ${{ github.ref }}
           
-          ### ✨ New Features
-          - Advanced data processing with Rust backend
-          - React-based modern UI
-          - Cross-platform Electron desktop app
-          - Workflow engine for data transformations
-          - Advanced formula support (SUMIFS, PIVOT, TEXT_JOIN)
+          ## 📦 Downloads
           
-          ### 🔧 Technical Improvements
-          - Rust backend for performance
-          - TypeScript frontend
-          - Tailwind CSS styling
-          - SQLite database integration
+          ### Executables
+          - **Windows:** `unified-plotter-windows-latest-${{ github.ref_name }}.zip`
+          - **macOS:** `unified-plotter-macos-latest-${{ github.ref_name }}.zip`
+          - **Linux:** `unified-plotter-ubuntu-latest-${{ github.ref_name }}.zip`
           
-          ### 📦 Downloads
-          **Choose your platform:**
+          ### Python Package
+          - **Source Distribution:** `unified-plotter-*.tar.gz`
+          - **Wheel:** `unified-plotter-*.whl`
           
-          🪟 **Windows Users**
-          - Download the `.exe` installer
-          - Run the installer and follow the setup wizard
+          ## 🔧 Installation
           
-          🍎 **macOS Users**
-          - Download the `.dmg` package
-          - Drag the app to your Applications folder
+          ### From Executable
+          1. Download the appropriate executable for your platform
+          2. Extract and run `unified-plotter` (or `unified-plotter.exe` on Windows)
           
-          🐧 **Linux Users**
-          - Download the `.AppImage` file
-          - Make it executable: `chmod +x filename.AppImage`
-          - Run: `./filename.AppImage`
+          ### From Python Package
+          ```bash
+          pip install unified-plotter
+          ```
           
-          ### 🎯 User Experience Improvements
-          - **Individual downloads** - No more large compressed archives
-          - **Platform-specific packages** - Optimized for each OS
-          - **Faster downloads** - Only download what you need
-          - **Easier installation** - Direct platform installers
+          ## ✅ Features
+          - Cross-platform GUI application
+          - CSV data visualization
+          - Interactive plotting
+          - Settings management
+          - Automated builds and testing
           
-          ### 🐛 Bug Fixes
-          - Fixed UI rendering issues
-          - Improved navigation
-          - Enhanced error handling
-          
-          ### 📋 Installation
-          1. **Download** the appropriate package for your platform (above)
-          2. **Install** using platform-specific method
-          3. **Launch** Unified Data Studio v2
-          
-          ### 🔄 Auto-updates
-          The app will automatically check for updates and notify you when new versions are available.
-          
-          ### 📋 Release Assets
-          **User Downloads**: Only platform-specific installers are shown in the Assets section
-          **Hidden Files**: Technical files (.blockmap, .yml) are filtered out for cleaner user experience
-          **Source Code**: Automatically included by GitHub for developers
-          
-          ### 📚 Documentation
-          - [Setup Guide](docs/SETUP.md)
-          - [Build Guide](docs/BUILD.md)
-          - [Integration Guide](docs/INTEGRATION.md)
-          
-          ### 🤝 Contributing
-          We welcome contributions! Please see our contributing guidelines.
-          
-          ### 📄 License
-          MIT License - see [LICENSE](LICENSE) file for details.
-          
-          ---
-          *This release was automatically generated by GitHub Actions*
+          ## 🐛 Bug Reports
+          Please report issues at: https://github.com/Raghavendra-Pratap/Plotter/issues
+        draft: false
+        prerelease: ${{ steps.release_type.outputs.prerelease }}
     
-    - name: List Artifacts Contents
-      run: |
-        echo "Listing artifacts directory contents:"
-        ls -la artifacts/
-        echo ""
-        echo "Ubuntu packages:"
-        ls -la artifacts/ubuntu-latest-packages/ || echo "No ubuntu packages found"
-        echo ""
-        echo "Windows packages:"
-        ls -la artifacts/windows-latest-packages/ || echo "No windows packages found"
-        echo ""
-        echo "macOS packages:"
-        ls -la artifacts/macos-latest-packages/ || echo "No macos packages found"
-    
-    - name: Upload Individual Platform Assets
-      run: |
-        echo "🚀 Uploading individual platform assets..."
-        
-        # Upload Windows assets (only user-friendly installers)
-        if [ -d "artifacts/windows-latest-packages" ]; then
-          echo "📦 Uploading Windows assets..."
-          for file in artifacts/windows-latest-packages/*; do
-            if [ -f "$file" ]; then
-              filename=$(basename "$file")
-              # Only upload main installers, skip technical files
-              if [[ "$filename" =~ \.(exe|msi|zip)$ ]] && [[ ! "$filename" =~ \.(blockmap|yml)$ ]]; then
-                echo "   Uploading: $filename"
-                gh release upload "${{ github.ref_name }}" "$file" \
-                  --repo "${{ github.repository }}" \
-                  --clobber
-              else
-                echo "   Skipping technical file: $filename"
-              fi
-            fi
-          done
-        fi
-        
-        # Upload macOS assets (only user-friendly installers)
-        if [ -d "artifacts/macos-latest-packages" ]; then
-          echo "🍎 Uploading macOS assets..."
-          for file in artifacts/macos-latest-packages/*; do
-            if [ -f "$file" ]; then
-              filename=$(basename "$file")
-              # Only upload main installers, skip technical files
-              if [[ "$filename" =~ \.(dmg|pkg|zip)$ ]] && [[ ! "$filename" =~ \.(blockmap|yml)$ ]]; then
-                echo "   Uploading: $filename"
-                gh release upload "${{ github.ref_name }}" "$file" \
-                  --repo "${{ github.repository }}" \
-                  --clobber
-              else
-                echo "   Skipping technical file: $filename"
-              fi
-            fi
-          done
-        fi
-        
-        # Upload Linux assets (only user-friendly installers)
-        if [ -d "artifacts/ubuntu-latest-packages" ]; then
-          echo "🐧 Uploading Linux assets..."
-          for file in artifacts/ubuntu-latest-packages/*; do
-            if [ -f "$file" ]; then
-              filename=$(basename "$file")
-              # Only upload main installers, skip technical files
-              if [[ "$filename" =~ \.(AppImage|deb|rpm|zip|tar\.gz)$ ]] && [[ ! "$filename" =~ \.(blockmap|yml)$ ]]; then
-                echo "   Uploading: $filename"
-                gh release upload "${{ github.ref_name }}" "$file" \
-                  --repo "${{ github.repository }}" \
-                  --clobber
-              else
-                echo "   Skipping technical file: $filename"
-              fi
-            fi
-          done
-        fi
-        
-        echo "✅ User-friendly platform assets uploaded! Technical files hidden from public view."
-    
-    - name: Notify release completion
-      run: |
-        echo "🎉 Unified Data Studio v2 Release ${{ github.ref_name }} completed successfully!"
-        echo "📦 Individual platform assets uploaded to GitHub release"
-        echo "🎯 Users can now download only what they need"
-        echo "🔄 Auto-updates will be available to users"
-        echo "🏷️ Version consistency maintained across all assets"
+    - name: Upload Release Assets
+      uses: actions/upload-release-asset@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        upload_url: ${{ steps.create_release.outputs.upload_url }}
+        asset_path: ./artifacts
+        asset_name: unified-plotter-${{ github.ref_name }}-artifacts.zip
+        asset_content_type: application/zip

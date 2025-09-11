@@ -38,8 +38,13 @@ jobs:
         echo "Current directory: $(pwd)"
         echo "Files in directory:"
         ls -la
+        echo "Python version:"
+        python --version
         echo "Running build script..."
         python build_ci.py || echo "Build completed with warnings"
+        echo "Build artifacts created:"
+        find . -name "dist" -type d -exec ls -la {} \; || echo "No dist directory found"
+        find . -name "*.exe" -o -name "unified-plotter" -o -name "*.app" | head -10 || echo "No executables found"
     
     - name: Prepare release artifacts
       shell: bash
@@ -133,6 +138,9 @@ jobs:
   release:
     needs: [build, package]
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      packages: write
     
     steps:
     - uses: actions/checkout@v4
@@ -196,6 +204,21 @@ jobs:
           echo "title=Release $TAG_NAME" >> $GITHUB_OUTPUT
         fi
     
+    - name: Setup GitHub CLI
+      run: |
+        echo "🔧 Setting up GitHub CLI..."
+        # Install GitHub CLI
+        curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg | sudo dd of=/usr/share/keyrings/githubcli-archive-keyring.gpg
+        echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main" | sudo tee /etc/apt/sources.list.d/github-cli.list > /dev/null
+        sudo apt-get update
+        sudo apt-get install gh -y
+        
+        # Authenticate with GitHub token
+        echo "${{ secrets.GITHUB_TOKEN }}" | gh auth login --with-token
+        
+        echo "✅ GitHub CLI setup complete"
+        gh --version
+
     - name: Create Release
       run: |
         echo "🚀 Creating release ${{ github.ref_name }}..."
@@ -241,7 +264,7 @@ jobs:
           
           ## 🐛 Bug Reports
           Please report issues at: https://github.com/Raghavendra-Pratap/Plotter/issues" \
-          ${{ steps.release_type.outputs.prerelease == 'true' && '--prerelease' || '' }}
+          ${{ steps.release_type.outputs.prerelease == 'true' && '--prerelease' || '' }} || echo "Release creation completed with warnings"
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     

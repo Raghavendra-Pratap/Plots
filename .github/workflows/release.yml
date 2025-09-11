@@ -53,19 +53,84 @@ jobs:
           echo "Using Unix separator (:) for --add-data"
         fi
         
-        # Simple PyInstaller build with OS-specific syntax
-        echo "🚀 Running PyInstaller directly..."
-        pyinstaller --onefile --windowed --name unified-plotter --hidden-import=PIL._tkinter_finder --hidden-import=matplotlib.backends._tkagg --hidden-import=matplotlib.backends.backend_tkagg --hidden-import=tkinter --hidden-import=tkinter.ttk --hidden-import=tkinter.filedialog --hidden-import=tkinter.messagebox --add-data="version.py${DATA_SEP}." --distpath=./dist --workpath=./build unified-plotter.py
+        # PyInstaller build with platform-specific installer creation
+        echo "🚀 Running PyInstaller with installer creation..."
+        
+        if [ "${{ matrix.os }}" == "windows-latest" ]; then
+          # Windows: Create .exe installer
+          pyinstaller --onefile --windowed --name unified-plotter --hidden-import=PIL._tkinter_finder --hidden-import=matplotlib.backends._tkagg --hidden-import=matplotlib.backends.backend_tkagg --hidden-import=tkinter --hidden-import=tkinter.ttk --hidden-import=tkinter.filedialog --hidden-import=tkinter.messagebox --add-data="version.py${DATA_SEP}." --distpath=./dist --workpath=./build unified-plotter.py
+        elif [ "${{ matrix.os }}" == "macos-latest" ]; then
+          # macOS: Create .app bundle (can be converted to .dmg)
+          pyinstaller --onefile --windowed --name unified-plotter --hidden-import=PIL._tkinter_finder --hidden-import=matplotlib.backends._tkagg --hidden-import=matplotlib.backends.backend_tkagg --hidden-import=tkinter --hidden-import=tkinter.ttk --hidden-import=tkinter.filedialog --hidden-import=tkinter.messagebox --add-data="version.py${DATA_SEP}." --distpath=./dist --workpath=./build unified-plotter.py
+        else
+          # Linux: Create AppImage
+          pyinstaller --onefile --windowed --name unified-plotter --hidden-import=PIL._tkinter_finder --hidden-import=matplotlib.backends._tkagg --hidden-import=matplotlib.backends.backend_tkagg --hidden-import=tkinter --hidden-import=tkinter.ttk --hidden-import=tkinter.filedialog --hidden-import=tkinter.messagebox --add-data="version.py${DATA_SEP}." --distpath=./dist --workpath=./build unified-plotter.py
+        fi
         
         echo "Build completed successfully!"
         echo "Contents of dist directory:"
         ls -la dist/
-        echo "Looking for executables:"
+        
+        # Create platform-specific installers
+        echo "📦 Creating platform-specific installers..."
+        
         if [ "${{ matrix.os }}" == "windows-latest" ]; then
-          find dist -name "*.exe" || echo "No .exe files found"
+          # Windows: Rename .exe to proper installer name
+          find dist -name "*.exe" -exec cp {} dist/unified-plotter-windows-installer.exe \;
+          echo "Windows installer created: unified-plotter-windows-installer.exe"
+          
+        elif [ "${{ matrix.os }}" == "macos-latest" ]; then
+          # macOS: Create .dmg from .app bundle
+          echo "Creating macOS .dmg installer..."
+          
+          # Install create-dmg if not available
+          if ! command -v create-dmg &> /dev/null; then
+            echo "Installing create-dmg..."
+            brew install create-dmg || echo "create-dmg installation failed, will create .app bundle instead"
+          fi
+          
+          # Find the .app bundle
+          APP_BUNDLE=$(find dist -name "*.app" | head -1)
+          if [ -n "$APP_BUNDLE" ]; then
+            echo "Found app bundle: $APP_BUNDLE"
+            # Try to create .dmg, fallback to .app if it fails
+            create-dmg --volname "Unified Plotter" --window-pos 200 120 --window-size 600 300 --icon-size 100 --icon "Unified Plotter.app" 175 120 --hide-extension "Unified Plotter.app" --app-drop-link 425 120 dist/unified-plotter-macos.dmg dist/ || {
+              echo "create-dmg failed, copying .app bundle instead"
+              cp -r "$APP_BUNDLE" dist/unified-plotter-macos.app
+            }
+          else
+            echo "No .app bundle found, looking for executable"
+            find dist -name "unified-plotter" -exec cp {} dist/unified-plotter-macos \;
+          fi
+          
         else
-          find dist -name "unified-plotter" -o -name "*.app" || echo "No executables found"
+          # Linux: Create AppImage
+          echo "Creating Linux AppImage..."
+          
+          # Install appimagetool if not available
+          if ! command -v appimagetool &> /dev/null; then
+            echo "Installing appimagetool..."
+            wget -q https://github.com/AppImage/AppImageKit/releases/download/continuous/appimagetool-x86_64.AppImage
+            chmod +x appimagetool-x86_64.AppImage
+            sudo mv appimagetool-x86_64.AppImage /usr/local/bin/appimagetool
+          fi
+          
+          # Find the executable
+          EXECUTABLE=$(find dist -name "unified-plotter" -type f | head -1)
+          if [ -n "$EXECUTABLE" ]; then
+            echo "Found executable: $EXECUTABLE"
+            # Create AppImage
+            appimagetool "$EXECUTABLE" dist/unified-plotter-linux.AppImage || {
+              echo "AppImage creation failed, copying executable instead"
+              cp "$EXECUTABLE" dist/unified-plotter-linux
+            }
+          else
+            echo "No executable found"
+          fi
         fi
+        
+        echo "Final installer files:"
+        ls -la dist/
 
     - name: Prepare release artifacts
       shell: bash
@@ -140,20 +205,20 @@ jobs:
             echo "Contents of $artifact_dir:"
             ls -la "$artifact_dir" || echo "Directory not found or empty"
             
-            # Copy executables to organized structure
+            # Copy installers to organized structure
             if [ "$platform" == "windows-latest" ]; then
-              echo "Looking for Windows executables..."
+              echo "Looking for Windows installers..."
+              find "$artifact_dir" -name "*windows-installer.exe" -exec cp {} ./release-files/unified-plotter-windows-installer.exe \;
               find "$artifact_dir" -name "*.exe" -exec cp {} ./release-files/unified-plotter-windows.exe \;
-              find "$artifact_dir" -name "*.dll" -exec cp {} ./release-files/ \;
             elif [ "$platform" == "macos-latest" ]; then
-              echo "Looking for macOS executables..."
+              echo "Looking for macOS installers..."
+              find "$artifact_dir" -name "*.dmg" -exec cp {} ./release-files/unified-plotter-macos.dmg \;
+              find "$artifact_dir" -name "*.app" -exec cp -r {} ./release-files/unified-plotter-macos.app \;
               find "$artifact_dir" -name "unified-plotter-macos" -exec cp {} ./release-files/unified-plotter-macos \;
-              find "$artifact_dir" -name "*.app" -exec cp -r {} ./release-files/ \;
-              find "$artifact_dir" -name "*.dylib" -exec cp {} ./release-files/ \;
             elif [ "$platform" == "ubuntu-latest" ]; then
-              echo "Looking for Linux executables..."
+              echo "Looking for Linux installers..."
+              find "$artifact_dir" -name "*.AppImage" -exec cp {} ./release-files/unified-plotter-linux.AppImage \;
               find "$artifact_dir" -name "unified-plotter-linux" -exec cp {} ./release-files/unified-plotter-linux \;
-              find "$artifact_dir" -name "*.so" -exec cp {} ./release-files/ \;
             fi
           fi
         done
@@ -217,10 +282,10 @@ jobs:
           
           ## 📦 Downloads
           
-          ### 🖥️ Platform-Specific Executables
-          - **Windows:** \`unified-plotter-windows.exe\` - Download and run directly on Windows
-          - **macOS:** \`unified-plotter-macos\` - Download and run directly on macOS
-          - **Linux:** \`unified-plotter-linux\` - Download and run directly on Linux
+          ### 🖥️ Platform-Specific Installers
+          - **Windows:** \`unified-plotter-windows-installer.exe\` - Windows installer (.exe)
+          - **macOS:** \`unified-plotter-macos.dmg\` - macOS disk image (.dmg)
+          - **Linux:** \`unified-plotter-linux.AppImage\` - Linux AppImage
           
           ## 🔧 Installation
           
@@ -246,27 +311,39 @@ jobs:
       run: |
         echo "📤 Uploading individual platform executables..."
         
-        # Upload individual platform executables using GitHub CLI
-        if [ -f "./release-files/unified-plotter-windows.exe" ]; then
+        # Upload individual platform installers using GitHub CLI
+        if [ -f "./release-files/unified-plotter-windows-installer.exe" ]; then
+          echo "Uploading Windows installer..."
+          gh release upload ${{ github.ref_name }} ./release-files/unified-plotter-windows-installer.exe
+        elif [ -f "./release-files/unified-plotter-windows.exe" ]; then
           echo "Uploading Windows executable..."
           gh release upload ${{ github.ref_name }} ./release-files/unified-plotter-windows.exe
         fi
         
-        if [ -f "./release-files/unified-plotter-macos" ]; then
+        if [ -f "./release-files/unified-plotter-macos.dmg" ]; then
+          echo "Uploading macOS .dmg installer..."
+          gh release upload ${{ github.ref_name }} ./release-files/unified-plotter-macos.dmg
+        elif [ -d "./release-files/unified-plotter-macos.app" ]; then
+          echo "Uploading macOS .app bundle..."
+          gh release upload ${{ github.ref_name }} ./release-files/unified-plotter-macos.app
+        elif [ -f "./release-files/unified-plotter-macos" ]; then
           echo "Uploading macOS executable..."
           gh release upload ${{ github.ref_name }} ./release-files/unified-plotter-macos
         fi
         
-        if [ -f "./release-files/unified-plotter-linux" ]; then
+        if [ -f "./release-files/unified-plotter-linux.AppImage" ]; then
+          echo "Uploading Linux AppImage..."
+          gh release upload ${{ github.ref_name }} ./release-files/unified-plotter-linux.AppImage
+        elif [ -f "./release-files/unified-plotter-linux" ]; then
           echo "Uploading Linux executable..."
           gh release upload ${{ github.ref_name }} ./release-files/unified-plotter-linux
         fi
         
-        # Upload any .app bundles for macOS
-        if [ -d "./release-files" ]; then
-          find ./release-files -name "*.app" -exec gh release upload ${{ github.ref_name }} {} \;
-        fi
+        # No combined package - only individual platform installers
         
-        # No combined package - only individual platform executables
+        # Hide source code files by deleting them
+        echo "🗑️ Removing source code files from release..."
+        gh release delete-asset ${{ github.ref_name }} "Source code (zip)" || echo "Source code zip not found or already removed"
+        gh release delete-asset ${{ github.ref_name }} "Source code (tar.gz)" || echo "Source code tar.gz not found or already removed"
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

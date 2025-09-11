@@ -1,6 +1,7 @@
 """
 Version information for Unified Plotter
 """
+
 import os
 from datetime import datetime
 
@@ -18,8 +19,17 @@ UPDATE_CHANNEL = "stable"  # stable, beta, alpha
 
 # Application metadata
 APP_NAME = "Unified Plotter"
-APP_DESCRIPTION = "Professional tool for visualizing and annotating bounding box data from CSV files"
-APP_KEYWORDS = ["bounding box", "annotation", "computer vision", "data visualization", "CSV", "matplotlib"]
+APP_DESCRIPTION = (
+    "Professional tool for visualizing and annotating bounding box data from CSV files"
+)
+APP_KEYWORDS = [
+    "bounding box",
+    "annotation",
+    "computer vision",
+    "data visualization",
+    "CSV",
+    "matplotlib",
+]
 
 # Build information
 BUILD_DATE = datetime.now().strftime("%Y-%m-%d")
@@ -42,8 +52,9 @@ FEATURES = {
     "logging": True,
     "help_system": True,
     "cross_platform": True,
-    "gui_interface": True
+    "gui_interface": True,
 }
+
 
 def get_version_info():
     """Get complete version information"""
@@ -62,32 +73,39 @@ def get_version_info():
         "min_python": MIN_PYTHON_VERSION,
         "min_memory_mb": MIN_MEMORY_MB,
         "recommended_memory_mb": RECOMMENDED_MEMORY_MB,
-        "features": FEATURES
+        "features": FEATURES,
     }
+
 
 def is_compatible_version():
     """Check if current Python version is compatible"""
     import sys
+
     current_version = sys.version_info
-    min_version = tuple(map(int, MIN_PYTHON_VERSION.split('.')))
+    min_version = tuple(map(int, MIN_PYTHON_VERSION.split(".")))
     return current_version >= min_version
+
 
 def get_update_url():
     """Get the update check URL"""
     return f"{UPDATE_SERVER}/check/{UPDATE_CHANNEL}/{__version__}"
 
+
 def get_download_url():
     """Get the download URL for updates"""
     return f"{UPDATE_SERVER}/download/{UPDATE_CHANNEL}/{__version__}"
+
 
 def get_version_string():
     """Get a formatted version string"""
     return f"{APP_NAME} v{__version__} (Build {__build__})"
 
+
 def check_for_updates():
     """Check for available updates"""
     try:
         import requests
+
         response = requests.get(get_update_url(), timeout=10)
         if response.status_code == 200:
             data = response.json()

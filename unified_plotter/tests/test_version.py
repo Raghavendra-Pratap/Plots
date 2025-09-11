@@ -1,11 +1,12 @@
 """
 Basic tests for version module
 """
+
 import sys
 import os
 
 # Add the parent directory to the path so we can import unified_plotter
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
 from version import get_version_info, get_version_string, is_compatible_version
 
@@ -13,18 +14,18 @@ from version import get_version_info, get_version_string, is_compatible_version
 def test_version_info():
     """Test that version info returns expected structure"""
     version_info = get_version_info()
-    
-    assert 'version' in version_info
-    assert 'build' in version_info
-    assert 'author' in version_info
-    assert 'app_name' in version_info
-    assert version_info['version'] == "2.1.0"
+
+    assert "version" in version_info
+    assert "build" in version_info
+    assert "author" in version_info
+    assert "app_name" in version_info
+    assert version_info["version"] == "2.1.0"
 
 
 def test_version_string():
     """Test that version string is formatted correctly"""
     version_string = get_version_string()
-    
+
     assert "Version 2.1.0" in version_string
     assert "Professional Edition" in version_string
 
@@ -40,14 +41,16 @@ def test_import_dependencies():
     try:
         # Test tkinter availability first
         import tkinter
+
         print("✓ tkinter available")
     except ImportError:
         print("⚠ tkinter not available (expected in some CI environments)")
-    
+
     try:
         # This is a basic import test - the actual import might fail due to GUI dependencies
         # but we can at least test that the module structure is correct
         import unified_plotter
+
         assert True
     except ImportError as e:
         # GUI dependencies might not be available in CI, that's okay

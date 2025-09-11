@@ -1,31 +1,38 @@
 """
 Setup script for Unified Plotter
 """
+
 from setuptools import setup, find_packages
 import os
 
+
 # Read version from version.py
 def get_version():
-    version_file = os.path.join(os.path.dirname(__file__), 'version.py')
-    with open(version_file, 'r') as f:
+    version_file = os.path.join(os.path.dirname(__file__), "version.py")
+    with open(version_file, "r") as f:
         exec(f.read())
-    return locals()['__version__']
+    return locals()["__version__"]
+
 
 # Read README
 def get_long_description():
-    readme_file = os.path.join(os.path.dirname(__file__), 'README.md')
+    readme_file = os.path.join(os.path.dirname(__file__), "README.md")
     if os.path.exists(readme_file):
-        with open(readme_file, 'r', encoding='utf-8') as f:
+        with open(readme_file, "r", encoding="utf-8") as f:
             return f.read()
     return "Professional tool for visualizing and annotating bounding box data from CSV files"
 
+
 # Read requirements
 def get_requirements():
-    requirements_file = os.path.join(os.path.dirname(__file__), 'requirements.txt')
+    requirements_file = os.path.join(os.path.dirname(__file__), "requirements.txt")
     if os.path.exists(requirements_file):
-        with open(requirements_file, 'r') as f:
-            return [line.strip() for line in f if line.strip() and not line.startswith('#')]
+        with open(requirements_file, "r") as f:
+            return [
+                line.strip() for line in f if line.strip() and not line.startswith("#")
+            ]
     return []
+
 
 setup(
     name="unified-plotter",

@@ -40,11 +40,23 @@ jobs:
         ls -la
         echo "Python version:"
         python --version
+        echo "PyInstaller version:"
+        python -c "import PyInstaller; print(PyInstaller.__version__)" || echo "PyInstaller not available"
         echo "Running build script..."
-        python build_ci.py || echo "Build completed with warnings"
+        python build_ci.py
+        echo "Build script exit code: $?"
         echo "Build artifacts created:"
         find . -name "dist" -type d -exec ls -la {} \; || echo "No dist directory found"
-        find . -name "*.exe" -o -name "unified-plotter" -o -name "*.app" | head -10 || echo "No executables found"
+        if [ -d "dist" ]; then
+          echo "Contents of dist directory:"
+          ls -la dist/
+          echo "Looking for executables:"
+          find dist -name "*.exe" -o -name "unified-plotter" -o -name "*.app" || echo "No executables found in dist"
+        else
+          echo "No dist directory created"
+        fi
+        echo "All files in current directory:"
+        find . -type f -name "*.exe" -o -name "unified-plotter" -o -name "*.app" || echo "No executables found anywhere"
     
     - name: Prepare release artifacts
       shell: bash

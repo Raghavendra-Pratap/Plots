@@ -28,11 +28,14 @@ def build_pyinstaller():
     script_file = None
     possible_names = ["unified-plotter.py", "unified_plotter.py"]
     
+    print("🔍 Looking for main script file...")
     for name in possible_names:
         if os.path.exists(name):
             script_file = name
             print(f"✅ Found script file: {name}")
             break
+        else:
+            print(f"❌ Not found: {name}")
     
     if not script_file:
         print("❌ No main script file found!")
@@ -61,7 +64,62 @@ def build_pyinstaller():
         script_file
     ]
     
-    return run_command(" ".join(cmd), "PyInstaller build")
+    # Add macOS-specific code signing if on macOS
+    if platform.system() == "Darwin":
+        print("🍎 Adding macOS code signing...")
+        cmd.extend([
+            "--osx-bundle-identifier", "com.unifiedplotter.app",
+            "--codesign-identity", "-",  # Ad-hoc signing
+            "--osx-entitlements-file", "entitlements.plist"
+        ])
+        
+        # Create basic entitlements file for ad-hoc signing
+        create_entitlements_file()
+    
+    success = run_command(" ".join(cmd), "PyInstaller build")
+    
+    # Verify build output
+    if success:
+        print("🔍 Verifying build output...")
+        if os.path.exists("dist"):
+            dist_files = os.listdir("dist")
+            print(f"📁 Files in dist directory: {dist_files}")
+            if not dist_files:
+                print("❌ Dist directory is empty!")
+                success = False
+        else:
+            print("❌ Dist directory was not created!")
+            success = False
+    
+    # Post-build: Remove quarantine attributes on macOS
+    if success and platform.system() == "Darwin":
+        print("🍎 Removing quarantine attributes...")
+        for root, dirs, files in os.walk("./dist"):
+            for file in files:
+                file_path = os.path.join(root, file)
+                run_command(f"xattr -d com.apple.quarantine '{file_path}' 2>/dev/null || true", 
+                           f"Remove quarantine from {file}")
+    
+    return success
+
+def create_entitlements_file():
+    """Create a basic entitlements file for macOS code signing"""
+    entitlements_content = """<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>com.apple.security.cs.allow-jit</key>
+    <true/>
+    <key>com.apple.security.cs.allow-unsigned-executable-memory</key>
+    <true/>
+    <key>com.apple.security.cs.disable-library-validation</key>
+    <true/>
+</dict>
+</plist>"""
+    
+    with open("entitlements.plist", "w") as f:
+        f.write(entitlements_content)
+    print("✅ Created entitlements.plist for macOS signing")
 
 def build_cx_freeze():
     """Build using cx_Freeze"""

@@ -106,6 +106,7 @@ jobs:
         pip install pyinstaller cx-freeze
     
     - name: Build executable (Cross-platform)
+      shell: bash
       run: |
         cd unified_plotter
         echo "🔨 Starting cross-platform build on ${{ matrix.os }}..."

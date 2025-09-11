@@ -5,7 +5,10 @@ import sys
 import os
 
 # Add the parent directory to the path so we can import unified_plotter
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
+if '__file__' in globals():
+    sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
+else:
+    sys.path.insert(0, '..')
 
 
 def test_python_version():
@@ -92,3 +95,35 @@ def test_file_structure():
         print(f"✓ {file_name} exists")
     
     return True
+
+
+def main():
+    """Run all basic tests"""
+    print("Running basic tests...\n")
+    
+    try:
+        test_python_version()
+        print("✓ Python version check passed")
+        
+        test_required_modules()
+        print("✓ Required modules test passed")
+        
+        test_tkinter_availability()
+        print("✓ Tkinter availability check passed")
+        
+        test_version_module()
+        print("✓ Version module test passed")
+        
+        test_file_structure()
+        print("✓ File structure test passed")
+        
+        print("\n✅ All basic tests passed!")
+        return True
+    except Exception as e:
+        print(f"\n❌ Test failed: {e}")
+        return False
+
+
+if __name__ == "__main__":
+    success = main()
+    sys.exit(0 if success else 1)

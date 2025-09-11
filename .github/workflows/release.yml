@@ -38,15 +38,22 @@ jobs:
         echo "Current directory: $(pwd)"
         echo "Files in directory:"
         ls -la
-        echo "Python version:"
-        python --version
-        echo "PyInstaller version:"
-        python -c "import PyInstaller; print(PyInstaller.__version__)" || echo "PyInstaller not available"
-        echo "Running build script..."
-        python build_ci.py
-        echo "Build script exit code: $?"
+        
+        # Create dist directory
+        mkdir -p dist
+        
+        # Simple PyInstaller build without Git operations
+        echo "🚀 Running PyInstaller directly..."
+        pyinstaller --onefile --windowed --name unified-plotter --hidden-import=PIL._tkinter_finder --hidden-import=matplotlib.backends._tkagg --hidden-import=matplotlib.backends.backend_tkagg --hidden-import=tkinter --hidden-import=tkinter.ttk --hidden-import=tkinter.filedialog --hidden-import=tkinter.messagebox --add-data="version.py:." --distpath=./dist --workpath=./build unified-plotter.py || {
+          echo "❌ PyInstaller failed, trying without --windowed flag..."
+          pyinstaller --onefile --name unified-plotter --hidden-import=PIL._tkinter_finder --hidden-import=matplotlib.backends._tkagg --hidden-import=matplotlib.backends.backend_tkagg --hidden-import=tkinter --hidden-import=tkinter.ttk --hidden-import=tkinter.filedialog --hidden-import=tkinter.messagebox --add-data="version.py:." --distpath=./dist --workpath=./build unified-plotter.py || {
+            echo "❌ All PyInstaller attempts failed"
+            exit 1
+          }
+        }
+        
+        echo "Build exit code: $?"
         echo "Build artifacts created:"
-        find . -name "dist" -type d -exec ls -la {} \; || echo "No dist directory found"
         if [ -d "dist" ]; then
           echo "Contents of dist directory:"
           ls -la dist/
@@ -55,8 +62,6 @@ jobs:
         else
           echo "No dist directory created"
         fi
-        echo "All files in current directory:"
-        find . -type f -name "*.exe" -o -name "unified-plotter" -o -name "*.app" || echo "No executables found anywhere"
     
     - name: Prepare release artifacts
       shell: bash

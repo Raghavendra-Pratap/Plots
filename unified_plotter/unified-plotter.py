@@ -1084,14 +1084,14 @@ def generate_thumbnail(df_selected):
 # Global variables for plotting
 df = None
 output_dir = None
-image_ids = []
-annotation_states = {}
-thumbnails = []
-thumb_axes = []
+image_ids: list[str] = []
+annotation_states: dict[str, dict] = {}
+thumbnails: list = []
+thumb_axes: list = []
 current_image_idx = [0]
-label_columns = []  # Will be populated with label columns from CSV
-image_url_columns = []
-loaded_images = {}
+label_columns: list[str] = []  # Will be populated with label columns from CSV
+image_url_columns: list[str] = []
+loaded_images: dict[str, any] = {}
 labels_enabled = [True]
 show_background_image = [False]
 y_axis_flipped = [True]
@@ -4537,83 +4537,6 @@ def create_plotting_interface_with_progress(progress_manager):
 
     # Final progress update
     progress_manager.update_progress("Ready!", 100, 100)
-
-
-def create_plotting_interface():
-    """Create the main plotting interface (legacy function for compatibility)"""
-    global thumbnails, thumb_axes, current_image_idx
-
-    # Generate thumbnails for each image
-    thumbnails = []
-    print("Creating thumbnails...")
-
-    # Apply progressive loading if enabled
-    if global_settings.get("progressive_loading", False):
-        print("ℹ Progressive thumbnail loading enabled for low-end devices")
-        # Create placeholder thumbnails first
-        for i, img_id in enumerate(image_ids):
-            try:
-                # Create a simple placeholder
-                placeholder = np.zeros((200, 200, 4), dtype=np.uint8)
-                placeholder[:, :, 3] = 255  # Full alpha
-                thumbnails.append(placeholder)
-            except:
-                thumbnails.append(np.zeros((200, 200, 4), dtype=np.uint8))
-
-        # Load thumbnails progressively in background
-        def load_thumbnail_progressive(img_id, index):
-            try:
-                df_sel = df[df["image_id"] == img_id]
-                thumb = generate_thumbnail(df_sel)
-                thumbnails[index] = thumb
-                # Update display if this thumbnail is currently visible
-                if index == current_image_idx[0]:
-                    update_thumbnail_visibility()
-                print(f"  ✓ Loaded thumbnail {index+1}/{len(image_ids)}")
-            except Exception as e:
-                print(f"✗ Error creating thumbnail for {img_id}: {e}")
-
-        # Start progressive loading
-        for i, img_id in enumerate(image_ids):
-            # Load first few thumbnails immediately
-            if i < 5:
-                load_thumbnail_progressive(img_id, i)
-            else:
-                # Schedule others to load later
-                root.after(
-                    100 * i,
-                    lambda idx=i, img=img_id: load_thumbnail_progressive(img, idx),
-                )
-
-        print(
-            f"✓ Created {len(thumbnails)} placeholder thumbnails (progressive loading enabled)"
-        )
-    else:
-        # Standard loading for high-end devices
-        for i, img_id in enumerate(image_ids):
-            try:
-                df_sel = df[df["image_id"] == img_id]
-                thumb = generate_thumbnail(df_sel)
-                thumbnails.append(thumb)
-                if (i + 1) % 10 == 0:
-                    print(f"  Created {i + 1}/{len(image_ids)} thumbnails")
-            except Exception as e:
-                print(f"✗ Error creating thumbnail for {img_id}: {e}")
-                # Create a blank thumbnail as fallback
-                try:
-                    fig, ax = plt.subplots(figsize=(2, 2))
-                    ax.axis("off")
-                    fig.canvas.draw()
-                    blank_thumb = np.array(fig.canvas.renderer.buffer_rgba())
-                    plt.close(fig)
-                    thumbnails.append(blank_thumb)
-                except:
-                    # Last resort: create a simple array
-                    thumbnails.append(np.zeros((200, 200, 4), dtype=np.uint8))
-        print(f"✓ Created {len(thumbnails)} thumbnails")
-
-    # Create the main plotting interface
-    create_main_plot_interface()
 
 
 def create_main_plot_interface():

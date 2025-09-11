@@ -4987,9 +4987,9 @@ else:
                 filetypes=[("CSV files", "*.csv"), ("All files", "*.*")],
                 initialdir=os.getcwd()
             )
-        if file_path:
-            screen_manager.destroy()
-            process_csv_file(file_path)
+            if file_path:
+                screen_manager.destroy()
+                process_csv_file(file_path)
         
         def show_settings_page():
             """Show settings page in the main window using UnifiedScreenManager"""

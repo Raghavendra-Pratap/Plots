@@ -55,12 +55,18 @@ jobs:
           echo "📁 Contents of dist directory:"
           ls -la dist/
           
-          # Find the main executable
+          # Find the main executable (cross-platform approach)
           if [ "${{ matrix.os }}" == "windows-latest" ]; then
+            # Windows: look for .exe files
             find dist -name "*.exe" -exec cp {} ../release-artifacts/unified-plotter-windows.exe \;
             find dist -name "unified-plotter.exe" -exec cp {} ../release-artifacts/unified-plotter-windows.exe \;
           else
-            find dist -name "unified-plotter" -type f -executable -exec cp {} ../release-artifacts/unified-plotter-${{ matrix.os }} \;
+            # Unix-like systems: look for unified-plotter file
+            find dist -name "unified-plotter" -type f -exec cp {} ../release-artifacts/unified-plotter-${{ matrix.os }} \;
+            # Also look for .app bundles on macOS
+            if [ "${{ matrix.os }}" == "macos-latest" ]; then
+              find dist -name "*.app" -exec cp -r {} ../release-artifacts/ \;
+            fi
           fi
           
           # Also copy any additional files that might be needed

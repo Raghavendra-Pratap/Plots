@@ -42,6 +42,7 @@ jobs:
         python build_ci.py || echo "Build completed with warnings"
     
     - name: Prepare release artifacts
+      shell: bash
       run: |
         cd unified_plotter
         echo "📦 Preparing release artifacts for ${{ matrix.os }}..."
@@ -136,6 +137,7 @@ jobs:
         path: ./artifacts
     
     - name: Organize release files
+      shell: bash
       run: |
         echo "📁 Organizing release files..."
         mkdir -p ./release-files
@@ -238,6 +240,7 @@ jobs:
         prerelease: ${{ steps.release_type.outputs.prerelease }}
     
     - name: Upload Release Assets
+      shell: bash
       run: |
         echo "📤 Uploading individual platform executables..."
         

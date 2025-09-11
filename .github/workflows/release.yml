@@ -197,14 +197,13 @@ jobs:
         fi
     
     - name: Create Release
-      uses: actions/create-release@v1
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      with:
-        tag_name: ${{ github.ref_name }}
-        release_name: ${{ steps.release_type.outputs.title }}
-        body: |
-          ## 🚀 ${{ steps.release_type.outputs.title }}
+      run: |
+        echo "🚀 Creating release ${{ github.ref_name }}..."
+        
+        # Create release using GitHub CLI
+        gh release create ${{ github.ref_name }} \
+          --title "${{ steps.release_type.outputs.title }}" \
+          --notes "## 🚀 ${{ steps.release_type.outputs.title }}
           
           **Release Type:** ${{ steps.release_type.outputs.type }}
           **Tag:** ${{ github.ref_name }}
@@ -214,24 +213,24 @@ jobs:
           ## 📦 Downloads
           
           ### 🖥️ Platform-Specific Executables
-          - **Windows:** `unified-plotter-windows.exe` - Download and run directly on Windows
-          - **macOS:** `unified-plotter-macos` - Download and run directly on macOS
-          - **Linux:** `unified-plotter-linux` - Download and run directly on Linux
+          - **Windows:** \`unified-plotter-windows.exe\` - Download and run directly on Windows
+          - **macOS:** \`unified-plotter-macos\` - Download and run directly on macOS
+          - **Linux:** \`unified-plotter-linux\` - Download and run directly on Linux
           
           ### 📚 Python Package (Optional)
-          - **Source Distribution:** `unified-plotter-*.tar.gz` - For Python developers
-          - **Wheel:** `unified-plotter-*.whl` - For Python developers
+          - **Source Distribution:** \`unified-plotter-*.tar.gz\` - For Python developers
+          - **Wheel:** \`unified-plotter-*.whl\` - For Python developers
           
           ## 🔧 Installation
           
           ### From Executable
           1. Download the appropriate executable for your platform
-          2. Extract and run `unified-plotter` (or `unified-plotter.exe` on Windows)
+          2. Extract and run \`unified-plotter\` (or \`unified-plotter.exe\` on Windows)
           
           ### From Python Package
-          ```bash
+          \`\`\`bash
           pip install unified-plotter
-          ```
+          \`\`\`
           
           ## ✅ Features
           - Cross-platform GUI application
@@ -241,43 +240,35 @@ jobs:
           - Automated builds and testing
           
           ## 🐛 Bug Reports
-          Please report issues at: https://github.com/Raghavendra-Pratap/Plotter/issues
-        draft: false
-        prerelease: ${{ steps.release_type.outputs.prerelease }}
+          Please report issues at: https://github.com/Raghavendra-Pratap/Plotter/issues" \
+          ${{ steps.release_type.outputs.prerelease == 'true' && '--prerelease' || '' }}
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     
     - name: Upload Release Assets
       shell: bash
       run: |
         echo "📤 Uploading individual platform executables..."
         
-        # Upload Windows executable
+        # Upload individual platform executables using GitHub CLI
         if [ -f "./release-files/unified-plotter-windows.exe" ]; then
           echo "Uploading Windows executable..."
-          curl -X POST \
-            -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
-            -H "Content-Type: application/octet-stream" \
-            --data-binary @./release-files/unified-plotter-windows.exe \
-            "${{ steps.create_release.outputs.upload_url }}?name=unified-plotter-windows.exe"
+          gh release upload ${{ github.ref_name }} ./release-files/unified-plotter-windows.exe
         fi
         
-        # Upload macOS executable
         if [ -f "./release-files/unified-plotter-macos" ]; then
           echo "Uploading macOS executable..."
-          curl -X POST \
-            -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
-            -H "Content-Type: application/octet-stream" \
-            --data-binary @./release-files/unified-plotter-macos \
-            "${{ steps.create_release.outputs.upload_url }}?name=unified-plotter-macos"
+          gh release upload ${{ github.ref_name }} ./release-files/unified-plotter-macos
         fi
         
-        # Upload Linux executable
         if [ -f "./release-files/unified-plotter-linux" ]; then
           echo "Uploading Linux executable..."
-          curl -X POST \
-            -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
-            -H "Content-Type: application/octet-stream" \
-            --data-binary @./release-files/unified-plotter-linux \
-            "${{ steps.create_release.outputs.upload_url }}?name=unified-plotter-linux"
+          gh release upload ${{ github.ref_name }} ./release-files/unified-plotter-linux
+        fi
+        
+        # Upload any .app bundles for macOS
+        if [ -d "./release-files" ]; then
+          find ./release-files -name "*.app" -exec gh release upload ${{ github.ref_name }} {} \;
         fi
         
         # Upload combined package
@@ -287,8 +278,6 @@ jobs:
         cd ..
         
         echo "Uploading combined package..."
-        curl -X POST \
-          -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
-          -H "Content-Type: application/zip" \
-          --data-binary @unified-plotter-${{ github.ref_name }}-all-platforms.zip \
-          "${{ steps.create_release.outputs.upload_url }}?name=unified-plotter-${{ github.ref_name }}-all-platforms.zip"
+        gh release upload ${{ github.ref_name }} unified-plotter-${{ github.ref_name }}-all-platforms.zip
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

@@ -24,6 +24,24 @@ def build_pyinstaller():
     """Build using PyInstaller"""
     print("🚀 Starting PyInstaller build...")
     
+    # Check for the main script file
+    script_file = None
+    possible_names = ["unified-plotter.py", "unified_plotter.py"]
+    
+    for name in possible_names:
+        if os.path.exists(name):
+            script_file = name
+            print(f"✅ Found script file: {name}")
+            break
+    
+    if not script_file:
+        print("❌ No main script file found!")
+        print("Available Python files:")
+        for file in os.listdir("."):
+            if file.endswith(".py"):
+                print(f"  - {file}")
+        return False
+    
     # Basic PyInstaller command
     cmd = [
         "pyinstaller",
@@ -40,7 +58,7 @@ def build_pyinstaller():
         "--add-data", "version.py:.",
         "--distpath", "./dist",
         "--workpath", "./build",
-        "unified-plotter.py"
+        script_file
     ]
     
     return run_command(" ".join(cmd), "PyInstaller build")

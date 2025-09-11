@@ -41,13 +41,41 @@ jobs:
         echo "Running build script..."
         python build_ci.py || echo "Build completed with warnings"
     
-    - name: Upload build artifacts
+    - name: Prepare release artifacts
+      run: |
+        cd unified_plotter
+        echo "📦 Preparing release artifacts for ${{ matrix.os }}..."
+        
+        # Create a clean release directory
+        mkdir -p ../release-artifacts
+        
+        # Copy only the executable files (not build artifacts)
+        if [ -d "dist" ]; then
+          echo "📁 Contents of dist directory:"
+          ls -la dist/
+          
+          # Find the main executable
+          if [ "${{ matrix.os }}" == "windows-latest" ]; then
+            find dist -name "*.exe" -exec cp {} ../release-artifacts/unified-plotter-windows.exe \;
+            find dist -name "unified-plotter.exe" -exec cp {} ../release-artifacts/unified-plotter-windows.exe \;
+          else
+            find dist -name "unified-plotter" -type f -executable -exec cp {} ../release-artifacts/unified-plotter-${{ matrix.os }} \;
+          fi
+          
+          # Also copy any additional files that might be needed
+          find dist -name "*.dll" -exec cp {} ../release-artifacts/ \;
+          find dist -name "*.so" -exec cp {} ../release-artifacts/ \;
+          find dist -name "*.dylib" -exec cp {} ../release-artifacts/ \;
+        fi
+        
+        echo "📋 Release artifacts prepared:"
+        ls -la ../release-artifacts/
+    
+    - name: Upload release artifacts
       uses: actions/upload-artifact@v4
       with:
         name: unified-plotter-${{ matrix.os }}-${{ github.ref_name }}
-        path: |
-          unified_plotter/dist/
-          unified_plotter/build/
+        path: release-artifacts/
 
   package:
     needs: build
@@ -107,6 +135,37 @@ jobs:
       with:
         path: ./artifacts
     
+    - name: Organize release files
+      run: |
+        echo "📁 Organizing release files..."
+        mkdir -p ./release-files
+        
+        # Organize platform-specific executables
+        for artifact_dir in artifacts/*/; do
+          if [ -d "$artifact_dir" ]; then
+            platform=$(basename "$artifact_dir" | sed 's/unified-plotter-\(.*\)-.*/\1/')
+            echo "Processing platform: $platform"
+            
+            # Copy executables to organized structure
+            if [ "$platform" == "windows-latest" ]; then
+              cp "$artifact_dir"/*.exe ./release-files/ 2>/dev/null || true
+              cp "$artifact_dir"/*.dll ./release-files/ 2>/dev/null || true
+            elif [ "$platform" == "macos-latest" ]; then
+              cp "$artifact_dir"/unified-plotter-macos-latest ./release-files/unified-plotter-macos 2>/dev/null || true
+              cp "$artifact_dir"/*.dylib ./release-files/ 2>/dev/null || true
+            elif [ "$platform" == "ubuntu-latest" ]; then
+              cp "$artifact_dir"/unified-plotter-ubuntu-latest ./release-files/unified-plotter-linux 2>/dev/null || true
+              cp "$artifact_dir"/*.so ./release-files/ 2>/dev/null || true
+            fi
+          fi
+        done
+        
+        # Make executables executable
+        chmod +x ./release-files/* 2>/dev/null || true
+        
+        echo "📋 Final release files:"
+        ls -la ./release-files/
+    
     - name: Determine release type
       id: release_type
       run: |
@@ -146,14 +205,14 @@ jobs:
           
           ## 📦 Downloads
           
-          ### Executables
-          - **Windows:** `unified-plotter-windows-latest-${{ github.ref_name }}.zip`
-          - **macOS:** `unified-plotter-macos-latest-${{ github.ref_name }}.zip`
-          - **Linux:** `unified-plotter-ubuntu-latest-${{ github.ref_name }}.zip`
+          ### 🖥️ Platform-Specific Executables
+          - **Windows:** `unified-plotter-windows.exe` - Download and run directly on Windows
+          - **macOS:** `unified-plotter-macos` - Download and run directly on macOS
+          - **Linux:** `unified-plotter-linux` - Download and run directly on Linux
           
-          ### Python Package
-          - **Source Distribution:** `unified-plotter-*.tar.gz`
-          - **Wheel:** `unified-plotter-*.whl`
+          ### 📚 Python Package (Optional)
+          - **Source Distribution:** `unified-plotter-*.tar.gz` - For Python developers
+          - **Wheel:** `unified-plotter-*.whl` - For Python developers
           
           ## 🔧 Installation
           
@@ -179,11 +238,48 @@ jobs:
         prerelease: ${{ steps.release_type.outputs.prerelease }}
     
     - name: Upload Release Assets
-      uses: actions/upload-release-asset@v1
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      with:
-        upload_url: ${{ steps.create_release.outputs.upload_url }}
-        asset_path: ./artifacts
-        asset_name: unified-plotter-${{ github.ref_name }}-artifacts.zip
-        asset_content_type: application/zip
+      run: |
+        echo "📤 Uploading individual platform executables..."
+        
+        # Upload Windows executable
+        if [ -f "./release-files/unified-plotter-windows.exe" ]; then
+          echo "Uploading Windows executable..."
+          curl -X POST \
+            -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
+            -H "Content-Type: application/octet-stream" \
+            --data-binary @./release-files/unified-plotter-windows.exe \
+            "${{ steps.create_release.outputs.upload_url }}?name=unified-plotter-windows.exe"
+        fi
+        
+        # Upload macOS executable
+        if [ -f "./release-files/unified-plotter-macos" ]; then
+          echo "Uploading macOS executable..."
+          curl -X POST \
+            -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
+            -H "Content-Type: application/octet-stream" \
+            --data-binary @./release-files/unified-plotter-macos \
+            "${{ steps.create_release.outputs.upload_url }}?name=unified-plotter-macos"
+        fi
+        
+        # Upload Linux executable
+        if [ -f "./release-files/unified-plotter-linux" ]; then
+          echo "Uploading Linux executable..."
+          curl -X POST \
+            -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
+            -H "Content-Type: application/octet-stream" \
+            --data-binary @./release-files/unified-plotter-linux \
+            "${{ steps.create_release.outputs.upload_url }}?name=unified-plotter-linux"
+        fi
+        
+        # Upload combined package
+        echo "Creating combined package..."
+        cd ./release-files
+        zip -r ../unified-plotter-${{ github.ref_name }}-all-platforms.zip . || echo "Zip creation completed with warnings"
+        cd ..
+        
+        echo "Uploading combined package..."
+        curl -X POST \
+          -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
+          -H "Content-Type: application/zip" \
+          --data-binary @unified-plotter-${{ github.ref_name }}-all-platforms.zip \
+          "${{ steps.create_release.outputs.upload_url }}?name=unified-plotter-${{ github.ref_name }}-all-platforms.zip"

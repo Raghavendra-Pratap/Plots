@@ -105,15 +105,15 @@ jobs:
         pip install -r unified_plotter/requirements.txt
         pip install pyinstaller cx-freeze
     
-    - name: Build executable (Cross-platform)
+    - name: Build executable (PyInstaller)
       run: |
         cd unified_plotter
-        echo "🔨 Starting cross-platform build on ${{ matrix.os }}..."
-        echo "Current directory: $(pwd)"
-        echo "Files in directory:"
-        ls -la
-        echo "Running build script..."
-        python build_ci.py || echo "Build completed with warnings"
+        pyinstaller --onefile --windowed --name unified-plotter --hidden-import=PIL._tkinter_finder --hidden-import=matplotlib.backends._tkagg unified_plotter.py || echo "PyInstaller build completed with warnings"
+    
+    - name: Build executable (cx_Freeze)
+      run: |
+        cd unified_plotter
+        python setup.py build || echo "cx_Freeze build completed with warnings"
     
     - name: Upload build artifacts
       uses: actions/upload-artifact@v4
